@@ -2,6 +2,7 @@
 #include <map>
 #include <deque>
 #include <cstdint>
+#include <cstring>
 #include <fstream>
 #include <iostream>
 #include <algorithm>
@@ -15,15 +16,16 @@
 
 
 #ifdef WIN32
-#define LLU "%ull"
-#else
 #define LLU "%llu"
+#else
+#define LLU "%lu"
 #endif
 
 using std::string;
 using std::ifstream;
 using std::streampos;
 using std::deque;
+using std::memset;
 
 avilib::AviReader::AviReader()
 {
@@ -59,7 +61,7 @@ bool avilib::AviReader::open( const char *filename )
 		int64_t pos = _f.tellg();
 		if( !_f.read( tag, 4 ) ) break;
 
-		sprintf( message, "%s @ " LLU, tag, pos );
+		sprintf( message, "%s @ " LLU, tag, (uint64_t)pos );
 		log( message );
 
 		if( *(uint32_t *)tag == (uint32_t)'KNUJ' ){
@@ -198,7 +200,7 @@ bool avilib::AviReader::open( const char *filename )
 				}
  */
 			}
-			sprintf( message, "%lux AVIOLDINDEX", size/sizeof(AVIOLDINDEX)); log( message );
+			sprintf( message, "%x AVIOLDINDEX", size/( uint32_t )sizeof(AVIOLDINDEX)); log( message );
 			delete [] p0;
 		}
 		else if( *(uint32_t *)tag == (uint32_t)'lmdo' ){
@@ -316,7 +318,7 @@ bool avilib::AviReader::open( const char *filename )
 }
 
 
-bool avilib::AviReader::read_frame( uint32_t idx, uint32_t stream, void *p_data )
+int32_t avilib::AviReader::read_frame( uint32_t idx, uint32_t stream, void *p_data )
 {
 	// if( _f.bad() ) return false;
 	// if( _f.eof() ) return false;
@@ -369,10 +371,10 @@ skip_search:
 	}
 
 	// uint64_t tell = _f.tellg().seekpos();
-	_f.read( (char *)p_data, p_aviIndex->u32_size );
-	return true;
+	//_f.read( (char *)p_data, p_aviIndex->u32_size );
+	//return true;
 
-	return !!_f.read( (char *)p_data, p_aviIndex->u32_size ).gcount();
+	return (int32_t)_f.read( (char *)p_data, p_aviIndex->u32_size ).gcount();
 }
 
 bool avilib::AviReader::close()
@@ -421,7 +423,7 @@ bool avilib::AviReader::getFrameCount( uint32_t stream, uint32_t &count )
 {
 	if( _f.bad() ) return false;
 
-	if( m_odmlExt.dwTotalFrames && stream == m_videoStreamIdx )
+	if( m_odmlExt.dwTotalFrames && stream == (uint32_t)m_videoStreamIdx )
 		count = std::min((uint32_t)m_odmlExt.dwTotalFrames, (uint32_t)m_frameIdxs[stream].size());
 	else
 		count = (uint32_t)m_frameIdxs[stream].size();
@@ -432,7 +434,7 @@ bool avilib::AviReader::getCodec( uint32_t stream, uint32_t &codec )
 {
 	if( _f.bad() ) return false;
 
-	if( stream == m_videoStreamIdx )
+	if( stream == (uint32_t)m_videoStreamIdx )
 		codec = (uint32_t)m_bitmapInfo.biCompression._;
 	else
 		codec = (uint32_t)m_waveformat.wFormatTag;
@@ -449,17 +451,18 @@ bool avilib::AviReader::getAllocSize( uint32_t stream, uint32_t &size )
 {
 	if( _f.bad() ) return false;
 
-	if( stream == m_videoStreamIdx )
-		size = std::max( m_frameIdxs[stream][0].u32_size, m_bitmapInfo.biSizeImage );
-	else
-		size = std::max( m_frameIdxs[stream][0].u32_size, m_avisHeader[stream].dwSuggestedBufferSize );
+	size = 0;
+	for( const DMLINDEX &dmlIdx : m_frameIdxs[stream] )
+		size = std::max( size, dmlIdx.u32_size );
+	size = std::max( size, stream == (uint32_t)m_videoStreamIdx ? m_bitmapInfo.biSizeImage
+					: m_avisHeader[stream].dwSuggestedBufferSize );
 	return true;
 }
 bool avilib::AviReader::getStreamType( uint32_t stream, avilib_streamtype_t &type )
 {
 	if( _f.bad() ) return false;
 
-	type = m_videoStreamIdx == stream ? avilib_Video : avilib_Audio;
+	type = (uint32_t)m_videoStreamIdx == stream ? avilib_Video : avilib_Audio;
 	return true;
 }
 

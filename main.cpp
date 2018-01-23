@@ -96,7 +96,7 @@ int main( int argc, char *argv[] )
 		// http://www.jmcgowan.com/avicodecs.html
 		void *p_writer = aviwriter_create();
 		aviwriter_set_vprops(p_writer, 0, w, h, (uint32_t)'024I', sz, 25.);
-		// aviwriter_set_frame_count(p_writer, 0, 70);
+		aviwriter_set_frame_count(p_writer, 0, 15000);
 
 		if( !aviwriter_open( p_writer, output.c_str() ) ) {
 			cerr << "Error opening file" << endl;
@@ -109,7 +109,7 @@ int main( int argc, char *argv[] )
 		in.seekg( 0*sz );
 		buffer = new uint8_t[ sz ];
 		
-		for( int32_t i=0; i<150; i++ ){
+		for( int32_t i=0; i<15000; i++ ){
 			if(in.eof()){
 				in.clear();
 				in.seekg(0);

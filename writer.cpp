@@ -2,6 +2,7 @@
 
 #include <fstream>
 #include <cstdint>
+#include <cstring>
 #include <deque>
 #include <map>
 #include <vector>
@@ -16,6 +17,7 @@
 
 using std::ofstream;
 using std::deque;
+using std::memset;
 
 
 #define STDINDEXSIZE 0x4000
@@ -155,34 +157,41 @@ bool avilib::AviWriter::open( const char *filename )
 			uint32_t num_stdIndexes = 128;
 			if( m_reservedFrames != 0 ){
 				num_stdIndexes = m_reservedFrames / ((STDINDEXSIZE - sizeof(avilib::AVISTDINDEX)) / sizeof(avilib::AVISTDINDEX_ENTRY));
+				if( !num_stdIndexes ){
+					m_openDML = false; // just guessing
+				}
 			} else {
 				m_reservedFrames = num_stdIndexes * ((STDINDEXSIZE - sizeof(avilib::AVISTDINDEX)) / sizeof(avilib::AVISTDINDEX_ENTRY));
 			}
-			size_t clearsize = sizeof( AVISUPERINDEX ) + num_stdIndexes*sizeof(avilib::AVISUPERINDEX_ENTRY);
 
-			// cf. http://msdn.microsoft.com/en-us/library/windows/desktop/ff625871(v=vs.85).aspx
-			m_superIdx.fcc = 'xdni';
-			m_superIdx.nEntriesInUse = 1; // runtime adapted
-			m_superIdx.cb = (uint32_t)clearsize - 8;
-			m_superIdx.wLongsPerEntry = 4;
-			m_superIdx.bIndexSubType = 0; //[ AVI_INDEX_2FIELD | 0 ]
-			m_superIdx.bIndexType = AVI_INDEX_OF_INDEXES;
-			m_superIdx.dwChunkId = generate_fcc( "dc", 0 );
-			m_superIdx.dwReserved[0] = 0;
-			m_superIdx.dwReserved[1] = 0;
-			m_superIdx.dwReserved[2] = 0;
+			if( m_openDML )
+			{
+				size_t clearsize = sizeof( AVISUPERINDEX ) + num_stdIndexes*sizeof(avilib::AVISUPERINDEX_ENTRY);
 
-			pos_odmlSuperIdx = _f.tellp();
-			uint8_t *p = new uint8_t[clearsize];
-			memset(p,0x0,clearsize);
-			_f.write( (const char *)p, clearsize );
-			delete [] p;
-			// super index later -
+				// cf. http://msdn.microsoft.com/en-us/library/windows/desktop/ff625871(v=vs.85).aspx
+				m_superIdx.fcc = 'xdni';
+				m_superIdx.nEntriesInUse = 1; // runtime adapted
+				m_superIdx.cb = (uint32_t)clearsize - 8;
+				m_superIdx.wLongsPerEntry = 4;
+				m_superIdx.bIndexSubType = 0; //[ AVI_INDEX_2FIELD | 0 ]
+				m_superIdx.bIndexType = AVI_INDEX_OF_INDEXES;
+				m_superIdx.dwChunkId = generate_fcc( "dc", 0 );
+				m_superIdx.dwReserved[0] = 0;
+				m_superIdx.dwReserved[1] = 0;
+				m_superIdx.dwReserved[2] = 0;
+
+				pos_odmlSuperIdx = _f.tellp();
+				uint8_t *p = new uint8_t[clearsize];
+				memset(p,0x0,clearsize);
+				_f.write( (const char *)p, clearsize );
+				delete [] p;
+				// super index later -
+			}
 		}
 
 		// write strl size
 		off_tmp = _f.tellp();
-		uint32_t ui_strlSize = (uint32_t)(_f.tellp() - pos_strlSize) - 4;
+		uint32_t ui_strlSize = (uint32_t)(off_tmp - pos_strlSize) - 4;
 		_f.seekp(pos_strlSize);
 		_f.write( (const char *)&ui_strlSize, 4);
 		_f.seekp(off_tmp);

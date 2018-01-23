@@ -25,7 +25,7 @@ namespace avilib
 		avilib::WAVEFORMATEX m_waveFormat;
 
 
-		bool m_openDML = false;
+		bool m_openDML = true;
 		bool m_propsSet = false;
 		bool m_opened = false;
 		uint32_t m_reservedFrames = 0;

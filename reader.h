@@ -33,7 +33,7 @@ namespace avilib
 	
 		bool open( const char *filename );
 		bool close();
-		bool read_frame( uint32_t idx, uint32_t stream, void *data );
+		int32_t read_frame( uint32_t idx, uint32_t stream, void *data );
 		bool getSize( int32_t &width, int32_t &height );
 		bool getFrameRate( double &rateHz );
 		bool getFormat( uint32_t stream, avilib_BITMAPINFO &bm_info );
