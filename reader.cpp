@@ -241,7 +241,7 @@ bool avilib::AviReader::open( const char *filename )
 
 			sprintf( message, "%ux AVISUPERINDEX_ENTRY (%s)", super_index.nEntriesInUse, fcc.c_str()); log( message );
 
-			for_each(entries.begin(),entries.end(),[&](avilib::AVISUPERINDEX_ENTRY &entry){
+			for( avilib::AVISUPERINDEX_ENTRY &entry : entries ){
 				_f.seekg( entry.qwOffset, ifstream::beg );
 				avilib::AVISTDINDEX std_index;
 				_f.read( (char *)&std_index, sizeof(avilib::AVISTDINDEX) );
@@ -281,7 +281,7 @@ bool avilib::AviReader::open( const char *filename )
 					delete [] p0;
 				}
 				_f.clear();
-			}); // each superindex entry
+			} // each superindex entry
 			m_superIndex[stream_idx] = super_index;
 			_f.clear();
 			_f.seekg(superindex_end,ifstream::beg);

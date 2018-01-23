@@ -62,49 +62,6 @@ avilib::AviWriter::~AviWriter()
 }
 
 
-// cf. http://msdn.microsoft.com/en-us/library/ms779636.aspx
-//     http://msdn.microsoft.com/en-us/library/ms779632.aspx
-//     http://en.wikipedia.org/wiki/Audio_Video_Interleave
-//     http://www.jmcgowan.com/avi.html
-//     http://yaai.sourceforge.net/yaai/fileformat.html
-//     http://msdn.microsoft.com/en-us/library/aa451196.aspx
-//     
-
-//RIFF ('AVI '
-//      LIST ('hdrl'
-//            'avih'(<Main AVI Header>)
-//            LIST ('strl'
-//                  'strh'(<Stream header>)
-//                  'strf'(<Stream format>)
-//                  [ 'strd'(<Additional header data>) ]
-//                  [ 'strn'(<Stream name>) ]
-//                  ...
-//                 )
-//             ...
-//           )
-//      LIST ('movi'
-//            {SubChunk | LIST ('rec '
-//                              SubChunk1
-//                              SubChunk2
-//                              ...
-//                             )
-//               ...
-//            }
-//            ...
-//           )
-//      ['idx1' (<AVI Index>) ]
-//     )
-
-// data is always padded to nearest WORD boundary
-
-
-// A list has the following form: 
-// 'LIST' listSize listType listData
-// 
-// where 'LIST' is the literal FOURCC code 'LIST', listSize is a 4-byte value giving the size of the list, 
-// listType is a FOURCC code, and listData consists of chunks or lists, in any order. The value of listSize 
-// includes the size of listType plus the size of listData; it does not include the 'LIST' FOURCC or the size of listSize.
-
 uint32_t NULL32 = 0;
 
 bool avilib::AviWriter::open( const char *filename )
@@ -191,7 +148,7 @@ bool avilib::AviWriter::open( const char *filename )
 
 		// write strl size
 		off_tmp = _f.tellp();
-		uint32_t ui_strlSize = (uint32_t)(off_tmp - pos_strlSize) - 4;
+		uint32_t ui_strlSize = (uint32_t)(_f.tellp() - pos_strlSize) - 4;
 		_f.seekp(pos_strlSize);
 		_f.write( (const char *)&ui_strlSize, 4);
 		_f.seekp(off_tmp);
