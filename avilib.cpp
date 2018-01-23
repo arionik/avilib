@@ -30,7 +30,7 @@ AVI_DLL_DECL int32_t avireader_get_stream_count( void *p_context, uint32_t *coun
 	return ((avilib::AviReader *)p_context)->getStreamCount( *count ) ? 1 : 0;
 }
 AVI_DLL_DECL int32_t avireader_read_frame( void *p_context, uint32_t idx, uint32_t stream, void *data ){
-	return ((avilib::AviReader *)p_context)->read_frame( idx, stream, (uint8_t *)data ) ? 1 : 0;
+	return ((avilib::AviReader *)p_context)->read_frame( idx, stream, (uint8_t *)data );
 }
 AVI_DLL_DECL int32_t avireader_get_size( void *p_context, int32_t *width, int32_t *height ){
 	return ((avilib::AviReader *)p_context)->getSize( *width, *height ) ? 1 : 0;
