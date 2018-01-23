@@ -30,7 +30,7 @@ namespace avilib
 	public:
 		AviReader();
 		virtual ~AviReader();
-	
+
 		bool open( const char *filename );
 		bool close();
 		int32_t read_frame( uint32_t idx, uint32_t stream, void *data );
