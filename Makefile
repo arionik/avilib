@@ -1,6 +1,6 @@
 AR = ar
 RANLIB = ranlib
-CFLAGS = -D_LIB -Wall -Wno-unknown-pragmas
+CFLAGS = -Wall -Wno-unknown-pragmas
 
 ifeq ($(findstring __x86_64__, $(shell echo | $(CC) -dM -E -x c -)), __x86_64__)
 	BITS=64
@@ -22,10 +22,16 @@ ifeq ($(findstring darwin, $(TARGET)), darwin)
 else
 ifeq ($(findstring linux, $(TARGET)), linux)
 	OS=linux
-	CFLAGS += -fPIC -fno-strict-aliasing
+	CFLAGS += -fPIC -fno-strict-aliasing -Wno-multichar
 	CFLAGS += -std=gnu++11 
-	C1=-e
-	C2=e
+	OPERATING_SYSTEM=$(shell uname -a)
+	ifeq ($(findstring Ubuntu, $(OPERATING_SYSTEM)), Ubuntu)
+		C1=
+		C2=033
+	else
+		C1=-e
+		C2=e
+	endif
 endif
 endif
 
@@ -89,6 +95,7 @@ clean:
 all:	init $(LIB)
 debug:	init $(LIB)
 install:all
-	@cp $(LIB_DIR)libavi$(BITS).a $(INSTALL_DIR)/libavi.a
-	cp avilib.h $(INSTALL_HEADER_DIR)/
+	@install $(LIB_DIR)libavi$(BITS).a $(INSTALL_DIR)/libavi.a
+	@install avilib.h $(INSTALL_HEADER_DIR)/
+	@if test -f $(INSTALL_DIR)/libavi.a; then echo $(C1) "\$(C2)[92mInstalled $(INSTALL_DIR)/libavi.a\$(C2)[39m"; else echo $(C1) "\$(C2)[31mInstall of $(INSTALL_DIR)/libavi.a failed\$(C2)[39m"; fi
 
