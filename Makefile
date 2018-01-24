@@ -97,5 +97,5 @@ debug:	init $(LIB)
 install:all
 	@install $(LIB_DIR)libavi$(BITS).a $(INSTALL_DIR)/libavi.a
 	@install avilib.h $(INSTALL_HEADER_DIR)/
-	@if test -f $(INSTALL_DIR)/libavi.a; then echo $(C1) "\$(C2)[92mInstalled $(INSTALL_DIR)/libavi.a\$(C2)[39m"; else echo $(C1) "\$(C2)[31mInstall of $(INSTALL_DIR)/libavi.a failed\$(C2)[39m"; fi
+	@if test -f $(INSTALL_DIR)/libavi.a; then echo $(C1) "Installed \$(C2)[92m$(INSTALL_DIR)/libavi.a\$(C2)[39m"; else echo $(C1) "Install of \$(C2)[31m$(INSTALL_DIR)/libavi.a failed\$(C2)[39m"; fi
 

@@ -177,13 +177,15 @@ bool avilib::AviReader::open( const char *filename )
 			for (size_t i=0; i<size/sizeof(AVIOLDINDEX); i++) {
 				AVIOLDINDEX *idx = (AVIOLDINDEX *)p;
 				p += sizeof(AVIOLDINDEX);
+				
+				if( idx->dwChunkId._ == ' cer' )
+					continue;
 
 				DMLINDEX dml_index;
 				dml_index.dwChunkId = idx->dwChunkId;
 				dml_index.u32_flags = idx->dwFlags;
 				dml_index.i64_offset = idx->dwOffset;
 				dml_index.u32_size = idx->dwSize;
-
 				string fcc = idx->dwChunkId.fcc;
 				int32_t stream_idx = atoi(fcc.substr(0,2).c_str());
 				m_frameIdxs[stream_idx].push_back(dml_index);
@@ -246,6 +248,9 @@ bool avilib::AviReader::open( const char *filename )
 				avilib::AVISTDINDEX std_index;
 				_f.read( (char *)&std_index, sizeof(avilib::AVISTDINDEX) );
 
+				if( std_index.dwChunkId._ == ' cer' )
+					continue;
+
 				/*
 					if( std_index.dwChunkId._ != (uint32_t)'cd00' && std_index.dwChunkId._ != (uint32_t)'bd00'
 				 && std_index.dwChunkId._ != (uint32_t)'cd10' && std_index.dwChunkId._ != (uint32_t)'bd10' ){
@@ -266,7 +271,7 @@ bool avilib::AviReader::open( const char *filename )
 					{
 						avilib::AVISTDINDEX_ENTRY *idx = (avilib::AVISTDINDEX_ENTRY *)p;
 						p += sizeof(avilib::AVISTDINDEX_ENTRY);
-
+						
 						DMLINDEX dml_index;
 						dml_index.dwChunkId = std_index.dwChunkId;
 						dml_index.u32_flags = 0;
@@ -296,10 +301,14 @@ bool avilib::AviReader::open( const char *filename )
 			_f.seekg(size,ifstream::cur);
 			free( p_field_desc );
 		}
+		else if( *(uint32_t *)tag == ( uint32_t )'tadT'/* Adobe Premiere Timecode */ ){
+			continue;
+		}
 		else
 		{
 			_f.read( (char *)&size, 4 );
 			_f.seekg(size,ifstream::cur);
+			// FIXME: check size is smaller than current parent element's size
 		}
 	}
 

@@ -25,7 +25,7 @@ using std::regex_search;
 int main( int argc, char *argv[] )
 {
 	int32_t w = 0,h = 0;
-	uint32_t codec,alloc_size,fcount,streams;
+	uint32_t codec,alloc_size,read_size,fcount,streams;
 	uint8_t *buffer;
 
 	if( argc < 3 ) {
@@ -75,8 +75,8 @@ int main( int argc, char *argv[] )
 		buffer = new uint8_t[ alloc_size ];
 		uint32_t frame_idx = 0;
 
-		while( avireader_read_frame( p_reader, frame_idx++, i_stream, buffer ) )
-			out.write( (char *)buffer, alloc_size );
+		while( (read_size = avireader_read_frame( p_reader, frame_idx++, i_stream, buffer )) )
+			out.write( (char *)buffer, read_size );
 
 		if( fcount != frame_idx-1 )
 			cerr << "Said: " << fcount << ", is: " << frame_idx-1 << endl;
