@@ -1,15 +1,13 @@
 
 #include <stdint.h>
 #ifdef __GNUC__
-	#include <cstddef> 
-	#include <inttypes.h>
 	#define AVI_DLL_DECL
 #else
 	#ifndef _LIB
 		#ifndef AVI_IMPORT
 			#define AVI_DLL_DECL __declspec(dllexport)
 		#else
-			#define AVI_DLL_DECL
+			#define AVI_DLL_DECL  __declspec(dllimport)
 		#endif
 	#else
 		#define AVI_DLL_DECL
