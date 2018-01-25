@@ -15,10 +15,10 @@
 #include "reader.h"
 
 
-#ifdef WIN32
-#define LLU "%llu"
+#if defined(WIN32) || defined(__clang__)
+	#define LLU "%llu"
 #else
-#define LLU "%lu"
+	#define LLU "%ull"
 #endif
 
 using std::string;
@@ -230,8 +230,9 @@ bool avilib::AviReader::open( const char *filename )
 			string fcc = super_index.dwChunkId.fcc;
 			int32_t stream_idx = atoi(fcc.substr(0,2).c_str());
 
-			assert(0 == super_index.bIndexSubType);
-			assert(AVI_INDEX_OF_INDEXES == super_index.bIndexType);
+			assert( 0 == super_index.bIndexSubType );
+			if( 0 != super_index.bIndexSubType ) log( "Warning: 0 != super_index.bIndexSubType" );
+			if( AVI_INDEX_OF_INDEXES != super_index.bIndexType ) log( "Warning: AVI_INDEX_OF_INDEXES != super_index.bIndexType" );
 			deque<avilib::AVISUPERINDEX_ENTRY> entries;
 
 			for( uint32_t i=0; i<super_index.nEntriesInUse; i++ )
@@ -246,44 +247,41 @@ bool avilib::AviReader::open( const char *filename )
 			for( avilib::AVISUPERINDEX_ENTRY &entry : entries ){
 				_f.seekg( entry.qwOffset, ifstream::beg );
 				avilib::AVISTDINDEX std_index;
+				memset( &std_index, 0x0, sizeof(avilib::AVISTDINDEX));
 				_f.read( (char *)&std_index, sizeof(avilib::AVISTDINDEX) );
 
 				if( std_index.dwChunkId._ == ' cer' )
 					continue;
 
-				/*
-					if( std_index.dwChunkId._ != (uint32_t)'cd00' && std_index.dwChunkId._ != (uint32_t)'bd00'
-				 && std_index.dwChunkId._ != (uint32_t)'cd10' && std_index.dwChunkId._ != (uint32_t)'bd10' ){
-				 _f.clear();
-				 return;
-					}
-				 */
+				if( std_index.dwChunkId._ == (uint32_t)'cd00' || std_index.dwChunkId._ == (uint32_t)'bd00'
+				 || std_index.dwChunkId._ == (uint32_t)'cd10' || std_index.dwChunkId._ == (uint32_t)'bd10' ){ // too narrow
+				
+					// not for audio:
+					if( AVI_INDEX_OF_CHUNKS != std_index.bIndexType ) log( "Warning: AVI_INDEX_OF_CHUNKS != std_index.bIndexType" );
+					if( 0 != std_index.bIndexSubType ) log( "Warning: 0 != std_index.bIndexSubType" );
 
-				// not for audio:
-				assert(AVI_INDEX_OF_CHUNKS == std_index.bIndexType);
-				assert(0 == std_index.bIndexSubType);
-
-				//if( std_index.fcc._ == (uint32_t)'00xi' )
-				{
-					uint8_t *p = new uint8_t[std_index.cb], *p0 = p;
-					_f.read( (char *)p, std_index.cb );
-					for( uint32_t j=0; j<std_index.nEntriesInUse; j++ )
+					//if( std_index.fcc._ == (uint32_t)'00xi' )
 					{
-						avilib::AVISTDINDEX_ENTRY *idx = (avilib::AVISTDINDEX_ENTRY *)p;
-						p += sizeof(avilib::AVISTDINDEX_ENTRY);
+						uint8_t *p = new uint8_t[std_index.cb], *p0 = p;
+						_f.read( (char *)p, std_index.cb );
+						for( uint32_t j=0; j<std_index.nEntriesInUse; j++ )
+						{
+							avilib::AVISTDINDEX_ENTRY *idx = (avilib::AVISTDINDEX_ENTRY *)p;
+							p += sizeof(avilib::AVISTDINDEX_ENTRY);
 						
-						DMLINDEX dml_index;
-						dml_index.dwChunkId = std_index.dwChunkId;
-						dml_index.u32_flags = 0;
-						dml_index.i64_offset = std_index.qwBaseOffset + idx->dwOffset;// + 4;
-						dml_index.u32_size = idx->dwSize & 0x7FFFFFFF;
-						if(dml_index.u32_size > m_bitmapInfo.biSizeImage){
-							// int z=0;
-						}
+							DMLINDEX dml_index;
+							dml_index.dwChunkId = std_index.dwChunkId;
+							dml_index.u32_flags = 0;
+							dml_index.i64_offset = std_index.qwBaseOffset + idx->dwOffset;// + 4;
+							dml_index.u32_size = idx->dwSize & 0x7FFFFFFF;
+							if(dml_index.u32_size > m_bitmapInfo.biSizeImage){
+								// int z=0;
+							}
 
-						odml_frameIdxs[stream_idx].push_back(dml_index);
+							odml_frameIdxs[stream_idx].push_back(dml_index);
+						}
+						delete [] p0;
 					}
-					delete [] p0;
 				}
 				_f.clear();
 			} // each superindex entry
@@ -431,11 +429,7 @@ bool avilib::AviReader::getFormat( uint32_t stream, avilib_WAVEFORMATEX &wav_inf
 bool avilib::AviReader::getFrameCount( uint32_t stream, uint32_t &count )
 {
 	if( _f.bad() ) return false;
-
-	if( m_odmlExt.dwTotalFrames && stream == (uint32_t)m_videoStreamIdx )
-		count = std::min((uint32_t)m_odmlExt.dwTotalFrames, (uint32_t)m_frameIdxs[stream].size());
-	else
-		count = (uint32_t)m_frameIdxs[stream].size();
+	count = (uint32_t)m_frameIdxs[stream].size();
 
 	return true;
 }
