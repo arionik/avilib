@@ -25,7 +25,7 @@ using std::regex_search;
 int main( int argc, char *argv[] )
 {
 	int32_t w = 0,h = 0;
-	uint32_t codec,alloc_size,read_size,fcount,streams;
+	uint32_t codec,alloc_size,fcount,streams;
 	uint8_t *buffer;
 
 	if( argc < 3 ) {
@@ -40,6 +40,7 @@ int main( int argc, char *argv[] )
 	if( read ){
 		
 		double rateHz;
+		uint32_t read_size;
 		void *p_reader = avireader_create();
 		if( !avireader_open(p_reader, input.c_str() ) ) {
 			cerr << "Error opening file" << endl;
