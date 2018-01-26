@@ -113,7 +113,7 @@ bool avilib::AviWriter::open( const char *filename )
 		{
 			uint32_t num_stdIndexes = 128;
 			if( m_reservedFrames != 0 ){
-				num_stdIndexes = m_reservedFrames / ((STDINDEXSIZE - sizeof(avilib::AVISTDINDEX)) / sizeof(avilib::AVISTDINDEX_ENTRY));
+				num_stdIndexes = (m_reservedFrames + ((STDINDEXSIZE - sizeof(avilib::AVISTDINDEX)) / sizeof(avilib::AVISTDINDEX_ENTRY)) - 1) / ((STDINDEXSIZE - sizeof(avilib::AVISTDINDEX)) / sizeof(avilib::AVISTDINDEX_ENTRY));
 				if( !num_stdIndexes ){
 					m_openDML = false; // just guessing
 				}
@@ -160,7 +160,7 @@ bool avilib::AviWriter::open( const char *filename )
 			_f.write( (const char *)&i_tmp, 4 );
 			_f.write( "odml", 4 );
 			_f.write( "dmlh", 4 );
-			i_tmp = 248;//sizeof(avilib::ODMLExtendedAVIHeader);
+			i_tmp = 248;
 			_f.write( (const char *)&i_tmp, 4 );
 			pos_odmlExt = _f.tellp();
 			uint8_t *p = new uint8_t[248];
