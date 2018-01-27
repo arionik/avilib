@@ -41,7 +41,7 @@ int main( int argc, char *argv[] )
 		
 		double rateHz;
 		uint32_t read_size;
-		void *p_reader = avireader_create();
+		avireader_t *p_reader = avireader_create();
 		if( !avireader_open(p_reader, input.c_str() ) ) {
 			cerr << "Error opening file" << endl;
 			return -1;
@@ -95,7 +95,7 @@ int main( int argc, char *argv[] )
 		uint32_t sz = w*h * 3 / 2u;
 
 		// http://www.jmcgowan.com/avicodecs.html
-		void *p_writer = aviwriter_create();
+		aviwriter_t *p_writer = aviwriter_create();
 		aviwriter_set_vprops(p_writer, 0, w, h, (uint32_t)'024I', sz, 25.);
 		aviwriter_set_frame_count(p_writer, 0, 15000);
 
