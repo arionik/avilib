@@ -1,10 +1,9 @@
 
-#include <cstdint>
 #include <string>
-#include <deque>
 #include <iostream>
 #include <fstream>
 #include <vector>
+#include <deque>
 #include <map>
 
 #include "avilib.h"
