@@ -296,7 +296,6 @@ bool avilib::AviReader::open( const char *filename )
 			_f.read( (char *)&vprop_header, std::min((size_t)size,sizeof(VIDEO_PROP_HEADER)) );
 			VIDEO_PROP_HEADER::VIDEO_FIELD_DESC *p_field_desc = (VIDEO_PROP_HEADER::VIDEO_FIELD_DESC *)malloc(sizeof(VIDEO_PROP_HEADER::VIDEO_FIELD_DESC)*vprop_header.nbFieldPerFrame);
 			_f.read((char *)p_field_desc, vprop_header.nbFieldPerFrame*sizeof(VIDEO_PROP_HEADER::VIDEO_FIELD_DESC));
-			_f.seekg(size,ifstream::cur);
 			free( p_field_desc );
 		}
 		else if( *(uint32_t *)tag == ( uint32_t )'tadT'/* Adobe Premiere Timecode */ ){
