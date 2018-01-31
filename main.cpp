@@ -67,9 +67,6 @@ int main( int argc, char *argv[] )
 		avireader_get_alloc_size( p_reader, i_stream, &alloc_size );
 		avireader_get_frame_count( p_reader, i_stream, &fcount );
 
-		string suffix = "yuv";
-		if( codec == (uint32_t)'012r' ) suffix = "rgb";
-
 		ofstream out( output.c_str(), ofstream::binary|ofstream::trunc );
 		if( !out.good() ) return -1;
 

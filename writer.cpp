@@ -356,8 +356,7 @@ bool avilib::AviWriter::write_frame( uint8_t stream_idx, void *data )
 
 		_f.seekp(0,ofstream::end);
 
-
-		sprintf( message, "#%i: RIFFSize = %i", m_totalFrames, m_RIFF_size);
+		sprintf( message, "#%u: RIFFSize = %u", m_totalFrames, m_RIFF_size);
 		log( message );
 
 		m_RIFF_idx++;
@@ -380,7 +379,6 @@ bool avilib::AviWriter::write_frame( uint8_t stream_idx, void *data )
 		m_RIFF_size += sizeof(avilib::AVIOLDINDEX);
 		std::ofstream::streamoff framePosforOldIndex = _f.tellp();
 		framePosforOldIndex -= pos_1stMoviStart; // relative to first "movi"
-		// framePosforOldIndex -= 4;             // account for 4byte size
 
 		avilib::AVIOLDINDEX entry;
 		entry.dwChunkId = generate_fcc( "dc", 0 );
@@ -416,7 +414,7 @@ bool avilib::AviWriter::write_frame( uint8_t stream_idx, void *data )
 
 
 	m_avimHeader.dwTotalFrames++;
-	m_avisHeader.dwLength++;// = m_avisHeader.dwRate / m_avisHeader.dwScale;
+	m_avisHeader.dwLength++;
 	m_totalFrames++;
 	
 	return true;
