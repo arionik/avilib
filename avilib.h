@@ -71,4 +71,4 @@ AVI_DLL_DECL int32_t aviwriter_set_vprops( aviwriter_t *p_context, uint8_t strea
 AVI_DLL_DECL int32_t aviwriter_set_frame_count( aviwriter_t *p_context, uint8_t stream_idx, uint32_t count );
 
 
-
+AVI_DLL_DECL void avilib_version( int32_t *p_maj, int32_t *p_min, int32_t *p_rev, const char **ppc_string );

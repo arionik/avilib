@@ -13,6 +13,20 @@
 #include "reader.h"
 
 
+
+#define AVILIB_VERSION_Maj 0
+#define AVILIB_VERSION_Min 1
+#define AVILIB_VERSION_Rev 0
+#define STR_(x) #x
+#define STR(x) STR_(x)
+#define AVILIB_VERSION_Str "avilib ver" STR(AVILIB_VERSION_Maj) "." STR(AVILIB_VERSION_Min) "." STR(AVILIB_VERSION_Rev) " 2018"
+AVI_DLL_DECL void avilib_version( int32_t *p_maj, int32_t *p_min, int32_t *p_rev, const char **ppc_string ){
+	if( p_maj ) *p_maj = AVILIB_VERSION_Maj;
+	if( p_min ) *p_min = AVILIB_VERSION_Min;
+	if( p_rev ) *p_rev = AVILIB_VERSION_Rev;
+	if( ppc_string ) *ppc_string = AVILIB_VERSION_Str;
+}
+
 AVI_DLL_DECL avireader_t *avireader_create(){
 	return (avireader_t *)new avilib::AviReader;
 }

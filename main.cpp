@@ -28,6 +28,11 @@ int main( int argc, char *argv[] )
 	uint32_t codec,alloc_size,fcount,streams;
 	uint8_t *buffer;
 
+	int32_t maj, min, rev;
+	const char *string_ver;
+	avilib_version( &maj, &min, &rev, &string_ver );
+	cerr << string_ver << endl;
+
 	if( argc < 3 ) {
 		cerr << "Usage: aviapp <<input>> <<output>>" << endl;
 		exit( 1 );
