@@ -18,6 +18,10 @@ namespace avilib
 		std::map<int32_t, avilib::AVISUPERINDEX> m_superIndex;
 		avilib::BITMAPINFO m_bitmapInfo;
 		avilib::WAVEFORMATEX m_waveformat;
+		avilib::WAVEFORMATEXTENSIBLE m_waveformatExt;
+		avilib::MPEG1WAVEFORMAT m_waveformatMpeg12;
+		avilib::MPEGLAYER3WAVEFORMAT m_waveformatMP3;
+
 		avilib::ODMLExtendedAVIHeader m_odmlExt;
 
 		std::map<int32_t, std::deque<DMLINDEX>> m_frameIdxs;

@@ -18,9 +18,58 @@ using std::string;
 using std::ifstream;
 using std::ostringstream;
 using std::ofstream;
+using std::ostream;
 using std::regex;
 using std::smatch;
 using std::regex_search;
+
+struct wavFile {
+	static void write_wav_header( avilib_WAVEFORMATEX *p_waveInfo, ostream &out )
+	{
+		uint32_t N32 = 0;
+		uint16_t N16 = 0;
+
+		out.write( "RIFF", 4 );
+		out.write( (const char *)&N32, 4 );
+		out.write( "WAVE", 4 );
+
+		out.write( "fmt ", 4 );
+		N32 = 16;
+		out.write( (const char *)&N32, 4 );
+
+		N16 = 1; // encoding tags
+		out.write( (const char *)&N16, 2 );
+
+		N16 = p_waveInfo->nChannels;
+		out.write( (const char *)&N16, 2 );
+		N32 = p_waveInfo->nSamplesPerSec;
+		out.write( (const char *)&N32, 4 );
+		N32 = p_waveInfo->nAvgBytesPerSec;
+		out.write( (const char *)&N32, 4 );
+		N16 = p_waveInfo->nBlockAlign;
+		out.write( (const char *)&N16, 2 );
+		N16 = p_waveInfo->wBitsPerSample;
+		out.write( (const char *)&N16, 2 );
+		out.write( "data", 4 );
+		N32 = 0;
+		out.write( (const char *)&N32, 4 );
+	}
+	static void finalize( ostream &out )
+	{
+		uint32_t N32;
+		out.seekp( 0u, ostream::end );
+		auto filesize = out.tellp();
+		out.seekp( 4u, ostream::beg );
+		N32 = (uint32_t)filesize - 8u;
+		out.write( (const char *)&N32, 4 );
+		N32 = (uint32_t)filesize - 44u;
+		out.seekp( 40u, ostream::beg );
+		out.write( (const char *)&N32, 4 );
+	}
+};
+
+
+
 
 int main( int argc, char *argv[] )
 {
@@ -55,7 +104,10 @@ int main( int argc, char *argv[] )
 		avilib_BITMAPINFO bm_info = {0};
 		avilib_WAVEFORMATEX wav_info = {0};
 		avilib_streamtype_t streamtype = avilib_UnknownStreamtype;
-		avilib_streamtype_t desired_streamtype = avilib_Video;
+		avilib_streamtype_t desired_streamtype = avilib_Audio;
+
+		ofstream out( output.c_str(), ofstream::binary|ofstream::trunc );
+		if( !out.good() ) return -1;
 
 		uint32_t i_stream = ~0u;
 		while(streamtype != desired_streamtype)
@@ -64,27 +116,31 @@ int main( int argc, char *argv[] )
 		avireader_get_stream_type( p_reader, i_stream, &streamtype );
 		if( streamtype == avilib_Video )
 			avireader_get_vformat( p_reader, i_stream, &bm_info );
-		else
+		else {
 			avireader_get_aformat( p_reader, i_stream, &wav_info );
+			wavFile::write_wav_header( &wav_info, out );
+		}
 		avireader_get_size( p_reader, &w, &h );
 		avireader_get_vrate( p_reader, &rateHz );
 		avireader_get_codec( p_reader, i_stream, &codec );
 		avireader_get_alloc_size( p_reader, i_stream, &alloc_size );
 		avireader_get_frame_count( p_reader, i_stream, &fcount );
 
-		ofstream out( output.c_str(), ofstream::binary|ofstream::trunc );
-		if( !out.good() ) return -1;
-
 		buffer = new uint8_t[ alloc_size ];
+		uint16_t *aubuff = new uint16_t[alloc_size];
 		uint32_t frame_idx = 0;
 
 		while( (read_size = avireader_read_frame( p_reader, frame_idx++, i_stream, buffer )) )
 			out.write( (char *)buffer, read_size );
 
+		if( streamtype == avilib_Audio )
+			wavFile::finalize( out );
+
 		if( fcount != frame_idx-1 )
 			cerr << "Said: " << fcount << ", is: " << frame_idx-1 << endl;
 
 		avireader_destroy( p_reader );
+		delete [] aubuff;
 
 	} else {
 

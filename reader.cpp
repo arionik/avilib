@@ -7,6 +7,7 @@
 #include <iostream>
 #include <algorithm>
 #include <string>
+#include <array>
 #include <assert.h>
 
 #include "avilib.h"
@@ -37,6 +38,7 @@ avilib::AviReader::~AviReader()
 }
 
 // https://msdn.microsoft.com/de-de/library/ms779636.aspx
+// http://www.onicos.com/staff/iz/formats/wav.html
 
 bool avilib::AviReader::open( const char *filename )
 {
@@ -136,11 +138,39 @@ bool avilib::AviReader::open( const char *filename )
 			_f.read( (char *)&size, 4 );
 			if( b_audio ){
 				_f.read( (char *)&m_waveformat, std::min( size, (uint32_t)sizeof(avilib::WAVEFORMATEX) ) );
-				if( size>sizeof(avilib::WAVEFORMATEX) )
+				if( m_waveformat.wFormatTag == WAVE_FORMAT_EXTENSIBLE ){
+					_f.seekg(-sizeof(avilib::WAVEFORMATEX),ifstream::cur);
+					_f.read( (char *)&m_waveformatExt, (uint32_t)sizeof(avilib::WAVEFORMATEXTENSIBLE) );
+					_f.seekg(size-sizeof(avilib::WAVEFORMATEXTENSIBLE),ifstream::cur);
+					sprintf( message, "WAVEFORMATEXTENSIBLE (\n  wFormatTag=0x%04x,\n  nChannels=%i,\n  nAvgBytesPerSec=%i,\n  nSamplesPerSec=%i,\n  wBitsPerSample=%i,\n  nBlockAlign=%i,\n  SubFormat=%i,\n  wSamplesPerBlock=%i,\n  dwChannelMask=%i\n)",
+							m_waveformat.wFormatTag, m_waveformat.nChannels, m_waveformat.nAvgBytesPerSec,
+							m_waveformat.nSamplesPerSec, m_waveformat.wBitsPerSample, m_waveformat.nBlockAlign,
+							m_waveformatExt.SubFormat, m_waveformatExt.Samples.wSamplesPerBlock, m_waveformatExt.dwChannelMask);
+				} else if( m_waveformat.wFormatTag == WAVE_FORMAT_MPEG ){
+					_f.seekg(-sizeof(avilib::WAVEFORMATEX),ifstream::cur);
+					_f.read( (char *)&m_waveformatMpeg12, (uint32_t)sizeof(avilib::MPEG1WAVEFORMAT) );
+					_f.seekg(size-sizeof(avilib::MPEG1WAVEFORMAT),ifstream::cur);
+					sprintf( message, "MPEG1WAVEFORMAT (\n  wFormatTag=0x%04x,\n  nChannels=%i,\n  nAvgBytesPerSec=%i,\n  nSamplesPerSec=%i,\n  wBitsPerSample=%i,\n  nBlockAlign=%i,\n  dwHeadBitrate=%i,\n  dwPTSHigh=%i,\n  dwPTSLow=%i,\n  fwHeadFlags=%i,\n  fwHeadLayer=%i,\n  fwHeadMode=%i,\n  fwHeadModeExt=%i,\n  wHeadEmphasis%i\n)",
+							m_waveformat.wFormatTag, m_waveformat.nChannels, m_waveformat.nAvgBytesPerSec,
+							m_waveformat.nSamplesPerSec, m_waveformat.wBitsPerSample, m_waveformat.nBlockAlign,
+							m_waveformatMpeg12.dwHeadBitrate, m_waveformatMpeg12.dwPTSHigh, m_waveformatMpeg12.dwPTSLow,
+							m_waveformatMpeg12.fwHeadFlags, m_waveformatMpeg12.fwHeadLayer, m_waveformatMpeg12.fwHeadMode,
+							m_waveformatMpeg12.fwHeadModeExt, m_waveformatMpeg12.wHeadEmphasis );
+				} else if( m_waveformat.wFormatTag == WAVE_FORMAT_MPEGLAYER3 ){
+					_f.seekg(-sizeof(avilib::WAVEFORMATEX),ifstream::cur);
+					_f.read( (char *)&m_waveformatMP3, (uint32_t)sizeof(avilib::MPEGLAYER3WAVEFORMAT) );
+					_f.seekg(size-sizeof(avilib::MPEGLAYER3WAVEFORMAT),ifstream::cur);
+					sprintf( message, "MPEGLAYER3WAVEFORMAT (\n  wFormatTag=0x%04x,\n  nChannels=%i,\n  nAvgBytesPerSec=%i,\n  nSamplesPerSec=%i,\n  wBitsPerSample=%i,\n  nBlockAlign=%i\n  fdwFlags%i,\n  nBlockSize%i,\n  nCodecDelay%i,\n  nFramesPerBlock%i,\n  wID=%i\n)",
+							m_waveformat.wFormatTag, m_waveformat.nChannels, m_waveformat.nAvgBytesPerSec,
+							m_waveformat.nSamplesPerSec, m_waveformat.wBitsPerSample, m_waveformat.nBlockAlign,
+							m_waveformatMP3.fdwFlags, m_waveformatMP3.nBlockSize, m_waveformatMP3.nCodecDelay, m_waveformatMP3.nFramesPerBlock,
+							m_waveformatMP3.wID);
+				} else {
 					_f.seekg(size-sizeof(avilib::WAVEFORMATEX),ifstream::cur);
-				sprintf( message, "WAVEFORMATEX (\n  wFormatTag=0x%04x,\n  nChannels=%i,\n  nAvgBytesPerSec=%i,\n  nSamplesPerSec=%i,\n  wBitsPerSample=%i,\n  nBlockAlign=%i\n)",
-						m_waveformat.wFormatTag, m_waveformat.nChannels, m_waveformat.nAvgBytesPerSec,
-						m_waveformat.nSamplesPerSec, m_waveformat.wBitsPerSample, m_waveformat.nBlockAlign );
+					sprintf( message, "WAVEFORMATEX (\n  wFormatTag=0x%04x,\n  nChannels=%i,\n  nAvgBytesPerSec=%i,\n  nSamplesPerSec=%i,\n  wBitsPerSample=%i,\n  nBlockAlign=%i\n)",
+							m_waveformat.wFormatTag, m_waveformat.nChannels, m_waveformat.nAvgBytesPerSec,
+							m_waveformat.nSamplesPerSec, m_waveformat.wBitsPerSample, m_waveformat.nBlockAlign );
+				}
 				log( message );
 			} else {
 				_f.read( (char *)&m_bitmapInfo, std::min( size, (uint32_t)sizeof(avilib::BITMAPINFO) ) );
@@ -253,9 +283,12 @@ bool avilib::AviReader::open( const char *filename )
 				if( std_index.dwChunkId._ == ' cer' )
 					continue;
 
-				if( std_index.dwChunkId._ == (uint32_t)'cd00' || std_index.dwChunkId._ == (uint32_t)'bd00'
-				 || std_index.dwChunkId._ == (uint32_t)'cd10' || std_index.dwChunkId._ == (uint32_t)'bd10' ){ // too narrow
-				
+				std::array<uint32_t,6> allowed = {
+					(uint32_t)'cd00', (uint32_t)'bd00', (uint32_t)'cd10', (uint32_t)'bd10',
+					(uint32_t)'bw00', (uint32_t)'bw10' };
+
+				if( std::find( allowed.begin(),allowed.end(), std_index.dwChunkId._ ) != allowed.end() ){
+
 					// not for audio:
 					if( AVI_INDEX_OF_CHUNKS != std_index.bIndexType ) log( "Warning: AVI_INDEX_OF_CHUNKS != std_index.bIndexType" );
 					if( 0 != std_index.bIndexSubType ) log( "Warning: 0 != std_index.bIndexSubType" );
@@ -282,6 +315,8 @@ bool avilib::AviReader::open( const char *filename )
 						}
 						delete [] p0;
 					}
+				} else {
+					int z=0;
 				}
 				_f.clear();
 			} // each superindex entry

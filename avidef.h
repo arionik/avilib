@@ -93,7 +93,11 @@ namespace avilib
 		//} bmiColors[1]; 
 	} BITMAPINFO;
 
+
 	typedef struct {
+#define WAVE_FORMAT_EXTENSIBLE 0xfffe
+#define WAVE_FORMAT_MPEG       0x0050 /* MPEG Layer 1,2 */
+#define WAVE_FORMAT_MPEGLAYER3 0x0055 /* MPEG Layer 3 */
 		WORD  wFormatTag;
 		WORD  nChannels;
 		DWORD nSamplesPerSec;
@@ -102,6 +106,38 @@ namespace avilib
 		WORD  wBitsPerSample;
 		WORD  cbSize;
 	} WAVEFORMATEX;
+
+	typedef struct {
+		WAVEFORMATEX Format;
+		union {
+			WORD wValidBitsPerSample;
+			WORD wSamplesPerBlock;
+			WORD wReserved;
+		} Samples;
+		DWORD        dwChannelMask;
+		WORD/* ? */  SubFormat;
+	} WAVEFORMATEXTENSIBLE;
+
+	typedef struct mpeg1waveformat_tag {
+		WAVEFORMATEX wfx;
+		WORD         fwHeadLayer;
+		DWORD        dwHeadBitrate;
+		WORD         fwHeadMode;
+		WORD         fwHeadModeExt;
+		WORD         wHeadEmphasis;
+		WORD         fwHeadFlags;
+		DWORD        dwPTSLow;
+		DWORD        dwPTSHigh;
+	} MPEG1WAVEFORMAT;
+
+	typedef struct mpeglayer3waveformat_tag {
+		WAVEFORMATEX wfx;
+		WORD         wID;
+		DWORD        fdwFlags;
+		WORD         nBlockSize;
+		WORD         nFramesPerBlock;
+		WORD         nCodecDelay;
+	} MPEGLAYER3WAVEFORMAT;
 
 	typedef struct {
 		DWORD dwTotalFrames;
