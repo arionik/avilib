@@ -46,12 +46,12 @@ ifeq ($(findstring debug, $(MAKECMDGOALS)), debug)
 	LIB = libavi$(BITS)d.a
 	CFLAGS += -ggdb -O0 -D_DEBUG
 	OBJ_DIR = ./build/$(ARCH)/debug/
-	LIB_DIR = ../bin/
+	LIB_DIR = ./bin/
 else
 	LIB = libavi$(BITS).a
 	CFLAGS += -Ofast -DNDEBUG 
 	OBJ_DIR = ./build/$(ARCH)/release/
-	LIB_DIR = ../bin/
+	LIB_DIR = ./bin/
 endif
 
 SRC_FILES = $(patsubst %.cpp, %.o, $(filter-out main.cpp, $(wildcard *.cpp)))

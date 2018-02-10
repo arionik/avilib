@@ -230,7 +230,7 @@ namespace avilib
 	} VIDEO_PROP_HEADER;
 }
 
-#ifdef WIN32
+#ifdef _WIN32
 #pragma pack(pop)
 #endif
 

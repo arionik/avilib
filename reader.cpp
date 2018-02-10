@@ -16,8 +16,10 @@
 #include "reader.h"
 
 
-#if defined(WIN32) || defined(__clang__)
+#if defined(_WIN32) || defined(__clang__)
 	#define LLU "%llu"
+#elif defined(__gnug__)
+	#define LLU "%lu"
 #else
 	#define LLU "%ull"
 #endif
@@ -315,8 +317,6 @@ bool avilib::AviReader::open( const char *filename )
 						}
 						delete [] p0;
 					}
-				} else {
-					int z=0;
 				}
 				_f.clear();
 			} // each superindex entry
