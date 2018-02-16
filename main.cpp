@@ -85,7 +85,7 @@ struct aviDump {
 
 int main( int argc, char *argv[] )
 {
-	int32_t w = 0,h = 0;
+	int32_t w = 352, h = 288;
 	uint32_t codec,alloc_size,fcount,streams;
 	uint8_t *buffer;
 
@@ -100,7 +100,8 @@ int main( int argc, char *argv[] )
 	}
 
 	string input = argv[ 1 ],
-		output = argv[ 2 ];
+	       output = argv[ 2 ],
+	       audiosrc = argc > 3 ? argv[ 3 ] : "";
 	bool read = !input.compare( input.size()-3, 3, "avi" );
 	
 	if( read ){
@@ -116,7 +117,7 @@ int main( int argc, char *argv[] )
 		avilib_BITMAPINFO bm_info = {0};
 		avilib_WAVEFORMATEX wav_info = {0};
 		avilib_streamtype_t streamtype = avilib_UnknownStreamtype;
-		avilib_streamtype_t desired_streamtype = avilib_Audio;
+		avilib_streamtype_t desired_streamtype = avilib_Video;
 
 		ofstream out( output.c_str(), ofstream::binary|ofstream::trunc );
 		if( !out.good() ) return -1;
@@ -159,32 +160,55 @@ int main( int argc, char *argv[] )
 			h = atoi( what[2].str().c_str() );
 		}
 		uint32_t sz = w*h * 3 / 2u;
+		uint8_t *audio_buffer = nullptr;
+		uint32_t audio_chunk_size = 0;
+
+		ifstream in( input, ifstream::binary );
+		if( !in.good() ) return -1;
+		ifstream audio_in;
+		if( !audiosrc.empty() ){
+			/* we hope it is PCM */
+			audio_in = ifstream( audiosrc, ifstream::binary );
+			if( !audio_in.good() ) return -2;
+			audio_in.seekg( (std::streamsize)44 );
+			audio_chunk_size = (uint32_t)((double)48000*2*8 / 25. + .5); // one chunk per video frame
+			audio_chunk_size += audio_chunk_size & 15;
+		}
 
 		// http://www.jmcgowan.com/avicodecs.html
 		aviwriter_t *p_writer = aviwriter_create();
-		aviwriter_set_vprops(p_writer, 0, w, h, (uint32_t)'024I', sz, 25.);
-		aviwriter_set_frame_count(p_writer, 0, 15000);
-
+		aviwriter_set_video_props(p_writer, 0, w, h, (uint32_t)'21VN'/*'024I'*/, sz, 25.);
+		aviwriter_set_frame_count( p_writer, 0, 1500 );
+		if( !audiosrc.empty() )
+			aviwriter_set_audio_props( p_writer, 1, 0x0001/* PCM */, 8, 48000, 48000 * 16, 16, 16 );
+		
 		if( !aviwriter_open( p_writer, output.c_str() ) ) {
 			cerr << "Error opening file" << endl;
 			return -1;
 		}
-		
-		ifstream in( input, ifstream::binary );
-		if( !in.good() ) return -1;
-		
-		in.seekg( 0*sz );
+
 		buffer = new uint8_t[ sz ];
-		
-		for( int32_t i=0; i<15000; i++ ){
+		if( !audiosrc.empty() )
+			audio_buffer = new uint8_t[ audio_chunk_size ];
+
+		for( int32_t i=0; i<1500; i++ ){
 			if(in.eof()){
 				in.clear();
 				in.seekg(0);
 			}
 			in.read( (char *)buffer, sz );
 			aviwriter_write_frame( p_writer, 0, buffer );
+			if( !audiosrc.empty() ){
+				if( audio_in.eof() ){
+					audio_in.clear();
+					audio_in.seekg( (std::streamsize)44 );
+				}
+				uint32_t read = (uint32_t)audio_in.read( (char *)audio_buffer, audio_chunk_size ).gcount();
+				aviwriter_write_chunk( p_writer, 1, audio_buffer, read );
+			}
 		}
 		aviwriter_destroy(p_writer);
+		delete [] audio_buffer;
 	}
 
 	delete [] buffer;

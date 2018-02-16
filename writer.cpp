@@ -5,12 +5,14 @@
 #include <cstring>
 #include <deque>
 #include <map>
+#include <array>
 #include <vector>
 #include <string>
 #include <algorithm>
 #include <assert.h>
 
 #include "avidef.h"
+#include "avilib.h"
 #include "common.h"
 #include "writer.h"
 
@@ -38,22 +40,19 @@ void avilib::AviWriter::reset()
 	memset(&m_avimHeader, 0x0, sizeof(avilib::AVIMAINHEADER));
 	m_avimHeader.fcc = 'hiva';
 	m_avimHeader.cb = sizeof( avilib::AVIMAINHEADER ) - 8;
-	m_avimHeader.dwFlags = AVIF_HASINDEX/* | AVIF_MUSTUSEINDEX | AVIF_TRUSTCKTYPE*/;
-	m_avimHeader.dwStreams = 1;
-
-	memset(&m_avisHeader, 0x0, sizeof(avilib::AVISTREAMHEADER));
-	m_avisHeader.fcc = 'hrts';
-	m_avisHeader.cb = sizeof( avilib::AVISTREAMHEADER ) - 8;
-	m_avisHeader.fccType = 'sdiv';
-	m_avisHeader.fccHandler = BI_RGB;
-	m_avisHeader.dwScale = 1;
-	m_avisHeader.dwQuality = -1;
-
+	m_avimHeader.dwFlags = AVIF_HASINDEX/* | AVIF_MUSTUSEINDEX | AVIF_TRUSTCKTYPE*/| AVIF_ISINTERLEAVED;
+	
 	memset(&m_bitmapInfo, 0x0, sizeof(avilib::BITMAPINFO));
 	m_bitmapInfo.biSize = sizeof( avilib::BITMAPINFO );
 	m_bitmapInfo.biPlanes = 1;
 	m_bitmapInfo.biBitCount = 24; // ??
 	m_bitmapInfo.biCompression = BI_RGB;
+	
+	memset(&m_waveFormat, 0x0, sizeof(avilib::WAVEFORMATEXTENSIBLE));
+	m_waveFormat.Format.cbSize = sizeof( avilib::WAVEFORMATEX ) - 4;
+
+	uint8_t guid_pcm[] = { 0x01,0x00,0x00,0x00,0x00,0x00,0x10,0x00,0x80,0x00,0x00,0xaa,0x00,0x38,0x9b,0x71 };
+	memcpy( m_waveFormat.SubFormat, &guid_pcm, 16 );
 }
 
 avilib::AviWriter::~AviWriter()
@@ -62,52 +61,74 @@ avilib::AviWriter::~AviWriter()
 }
 
 
-uint32_t NULL32 = 0;
+bool avilib::AviWriter::openDML( bool yes )
+{
+	if( m_opened ) return false;
+	m_openDML = yes;
+	return true;
+}
 
+
+uint32_t NULL32 = 0;
 bool avilib::AviWriter::open( const char *filename )
 {
-	if( !m_propsSet )
+	if( !m_streamTypes.size() )
 		return false;
 
-	int32_t i_tmp;
+	if( !m_openDML && !m_reservedFrames )
+		return false;
+	
+	// more than two not supported
+	// must be video or video + audio
+
+	int32_t i_tmp = 0;
 	ofstream::streamoff off_tmp;
 
+	for( auto idx_type : m_streamTypes )
+		if( i_tmp++ != idx_type.first )
+			return false; // not adjacent
+	
 	_f.open( filename, ofstream::binary|ofstream::trunc );
 	if( !_f.good() ) return false;
 
-	//RIFF ('AVI '
 	_f.write( "RIFF", 4 );
 	pos_RIFFSize = _f.tellp();
 	_f.write( (const char *)&NULL32, 4 ); // we'll come back to this later (pos_RIFFSize)
 	_f.write( "AVI ", 4 );
-
-	//      LIST ('hdrl'
 	_f.write( "LIST", 4 );
 
 	ofstream::streampos pos_hdrlSize = _f.tellp();
 	_f.write( (const char *)&NULL32, 4 );
-
 	_f.write( "hdrl", 4 );
-
-	//            'avih'(<Main AVI Header>)
 	pos_aviMainHeader = _f.tellp();
 	_f.write( (const char *)&m_avimHeader, sizeof(avilib::AVIMAINHEADER) );
 
 	// streams begin
-	for (int32_t i_stream=0; i_stream<1; i_stream++)
+	int32_t i_streams = (int32_t)m_streamTypes.size();
+	for (int32_t i_stream=0; i_stream<i_streams; i_stream++)
  	{
 		_f.write( "LIST", 4 );
 		ofstream::streampos pos_strlSize = _f.tellp();
 		_f.write( (const char *)&NULL32, 4 );
 
 		_f.write( "strl", 4 );
-		pos_streamHeader[0] = _f.tellp();
-		_f.write( (const char *)&m_avisHeader, sizeof(avilib::AVISTREAMHEADER) );
+		pos_streamHeader[ i_stream ] = _f.tellp();
+		_f.write( (const char *)&m_avisHeaders[i_stream], sizeof(avilib::AVISTREAMHEADER) );
 
 		_f.write( "strf", 4 );
-		i_tmp = sizeof(avilib::BITMAPINFO);
-		_f.write( (const char *)&i_tmp, 4 );
-		_f.write( (const char *)&m_bitmapInfo, sizeof(avilib::tagBITMAPINFOHEADER) );
+		if( m_streamTypes[ i_stream ] == avilib_Video )
+		{
+			i_tmp = sizeof(avilib::BITMAPINFO);
+			_f.write( (const char *)&i_tmp, 4 );
+			_f.write( (const char *)&m_bitmapInfo, sizeof(avilib::BITMAPINFO) );
+		}
+		else if( m_streamTypes[ i_stream ] == avilib_Audio )
+		{
+			m_waveFormat.Format.cbSize = sizeof( avilib::WAVEFORMATEXTENSIBLE ) - sizeof( avilib::WAVEFORMATEX );
+			i_tmp = sizeof(avilib::WAVEFORMATEXTENSIBLE);
+			_f.write( (const char *)&i_tmp, 4 );
+			_f.write( (const char *)&m_waveFormat, sizeof( avilib::WAVEFORMATEXTENSIBLE ) );
+		}
 
 		if( m_openDML )
 		{
@@ -126,18 +147,18 @@ bool avilib::AviWriter::open( const char *filename )
 				size_t clearsize = sizeof( AVISUPERINDEX ) + num_stdIndexes*sizeof(avilib::AVISUPERINDEX_ENTRY);
 
 				// cf. http://msdn.microsoft.com/en-us/library/windows/desktop/ff625871(v=vs.85).aspx
-				m_superIdx.fcc = 'xdni';
-				m_superIdx.nEntriesInUse = 1; // runtime adapted
-				m_superIdx.cb = (uint32_t)clearsize - 8;
-				m_superIdx.wLongsPerEntry = 4;
-				m_superIdx.bIndexSubType = 0; //[ AVI_INDEX_2FIELD | 0 ]
-				m_superIdx.bIndexType = AVI_INDEX_OF_INDEXES;
-				m_superIdx.dwChunkId = generate_fcc( "dc", 0 );
-				m_superIdx.dwReserved[0] = 0;
-				m_superIdx.dwReserved[1] = 0;
-				m_superIdx.dwReserved[2] = 0;
+				m_superIdxs[i_stream].fcc = 'xdni';
+				m_superIdxs[i_stream].nEntriesInUse = 1; // runtime adapted
+				m_superIdxs[i_stream].cb = (uint32_t)clearsize - 8;
+				m_superIdxs[i_stream].wLongsPerEntry = 4;
+				m_superIdxs[i_stream].bIndexSubType = 0; //[ AVI_INDEX_2FIELD | 0 ]
+				m_superIdxs[i_stream].bIndexType = AVI_INDEX_OF_INDEXES;
+				m_superIdxs[i_stream].dwChunkId = generate_fcc( m_streamTypes[ i_stream ] == avilib_Audio ? "wb" : "dc", i_stream );
+				m_superIdxs[i_stream].dwReserved[0] = 0;
+				m_superIdxs[i_stream].dwReserved[1] = 0;
+				m_superIdxs[i_stream].dwReserved[2] = 0;
 
-				pos_odmlSuperIdx = _f.tellp();
+				pos_odmlSuperIdx[i_stream] = _f.tellp();
 				uint8_t *p = new uint8_t[clearsize];
 				memset(p,0x0,clearsize);
 				_f.write( (const char *)p, clearsize );
@@ -148,29 +169,44 @@ bool avilib::AviWriter::open( const char *filename )
 
 		// write strl size
 		off_tmp = _f.tellp();
-		uint32_t ui_strlSize = (uint32_t)(_f.tellp() - pos_strlSize) - 4;
+		uint32_t ui_strlSize = (uint32_t)(off_tmp - pos_strlSize) - 4;
 		_f.seekp(pos_strlSize);
 		_f.write( (const char *)&ui_strlSize, 4);
 		_f.seekp(off_tmp);
 
+		// ---
+
 		if( m_openDML )
 		{
-			_f.write( "LIST", 4 );
-			i_tmp = 248 + 12;
-			_f.write( (const char *)&i_tmp, 4 );
-			_f.write( "odml", 4 );
-			_f.write( "dmlh", 4 );
-			i_tmp = 248;
-			_f.write( (const char *)&i_tmp, 4 );
-			pos_odmlExt = _f.tellp();
-			uint8_t *p = new uint8_t[248];
-			avilib::ODMLExtendedAVIHeader odml_ext = { 0 };
-			memset(p,0x0,248);
-			memcpy(p,&odml_ext,sizeof(avilib::ODMLExtendedAVIHeader));
-			_f.write((const char *)p, 248);
-			delete [] p;
+			avilib::AVISTDINDEX std_index;
+			std_index.fcc = i_stream == 1 ? '10xi' : '00xi';
+			std_index.wLongsPerEntry = sizeof( avilib::AVISTDINDEX_ENTRY ) / sizeof( DWORD );
+			std_index.bIndexSubType = 0; // must be 0
+			std_index.dwChunkId = generate_fcc( m_streamTypes[ i_stream ] == avilib_Audio ? "wb":"dc", i_stream );
+			std_index.qwBaseOffset = 0; // all dwOffsets in aIndex array are relative to this
+			std_index.dwReserved = 0; // must be 0
+			m_stdIndexes[i_stream].push_back( std_index );
 		}
 	} // streams
+
+	if( m_openDML )
+	{
+		_f.write( "LIST", 4 );
+		i_tmp = 248 + 12;
+		_f.write( (const char *)&i_tmp, 4 );
+		_f.write( "odml", 4 );
+		_f.write( "dmlh", 4 );
+		i_tmp = 248;
+		_f.write( (const char *)&i_tmp, 4 );
+		pos_odmlExt = _f.tellp();
+		uint8_t *p = new uint8_t[ i_tmp ];
+		avilib::ODMLExtendedAVIHeader odml_ext = { 0 };
+		memset( p, 0x0, i_tmp );
+		memcpy( p, &odml_ext, sizeof( avilib::ODMLExtendedAVIHeader ) );
+		_f.write( (const char *)p, i_tmp );
+		delete[] p;
+	}
+
 
 	// write hdrl size
 	off_tmp = _f.tellp();
@@ -184,25 +220,12 @@ bool avilib::AviWriter::open( const char *filename )
 	_f.write( "LIST", 4 );
 	pos_moviListSize = _f.tellp();
 	_f.write( (const char *)&NULL32, 4 ); // later ...
-	// m_currMoviListSize = 4; // needed?
 	pos_1stMoviStart = _f.tellp();
 	_f.write( "movi", 4 );
 
 	m_RIFF_size = (uint32_t)_f.tellp() + sizeof( avilib::AVIOLDINDEX );
 	m_totalFrames = 0;
 	m_currBaseOff = 0;
-
-	if( m_openDML ) // FIXME: support throughout
-	{
-		avilib::AVISTDINDEX std_index;
-		std_index.fcc = '00xi';
-		std_index.wLongsPerEntry = sizeof(avilib::AVISTDINDEX_ENTRY)/sizeof(DWORD);
-		std_index.bIndexSubType = 0; // must be 0
-		std_index.dwChunkId = generate_fcc( "dc", 0 );
-		std_index.qwBaseOffset = 0; // all dwOffsets in aIndex array are relative to this
-		std_index.dwReserved = 0; // must be 0
-		m_stdIndexes.push_back( std_index );
-	}
 
 
 	return _f.good();
@@ -215,6 +238,8 @@ bool avilib::AviWriter::close()
 	_f.seekp(pos_aviMainHeader);
 	_f.write( (const char *)&m_avimHeader, sizeof(avilib::AVIMAINHEADER) );
 
+	int32_t i_streams = (int32_t)m_streamTypes.size();
+
 	if( m_openDML )
 	{
 		// write odml total frame count
@@ -223,50 +248,64 @@ bool avilib::AviWriter::close()
 		_f.write((const char *)&odml_ext, sizeof(avilib::ODMLExtendedAVIHeader));
 
 		// write "00xi"s at the very end
-		deque<avilib::AVISUPERINDEX_ENTRY> deq_supIdxEntries;
-		for_each( m_stdIndexEntries.begin(), m_stdIndexEntries.end(), [&,this]( const std::pair<int32_t, deque<avilib::AVISTDINDEX_ENTRY>> &pair )
+		for( int32_t stream_idx = 0; stream_idx < i_streams; stream_idx++ )
 		{
-			avilib::AVISTDINDEX &std_index = m_stdIndexes[pair.first];
-			const deque<avilib::AVISTDINDEX_ENTRY> &deq_entries = pair.second;
+			deque<avilib::AVISUPERINDEX_ENTRY> deq_supIdxEntries;
+			for( auto &pair : m_stdIndexEntries[stream_idx] )
+			{
+				avilib::AVISTDINDEX &std_index = m_stdIndexes[stream_idx][pair.first];
+				const deque<avilib::AVISTDINDEX_ENTRY> &deq_entries = pair.second;
 
-			std_index.bIndexType = AVI_INDEX_OF_CHUNKS;
-			std_index.nEntriesInUse = (uint32_t)deq_entries.size();
-			std_index.cb = (uint32_t)(sizeof(avilib::AVISTDINDEX)-8 + sizeof(avilib::AVISTDINDEX_ENTRY)*deq_entries.size());
+				std_index.bIndexType = AVI_INDEX_OF_CHUNKS;
+				std_index.nEntriesInUse = (uint32_t)deq_entries.size();
+				std_index.cb = (uint32_t)(sizeof(avilib::AVISTDINDEX)-8 + sizeof(avilib::AVISTDINDEX_ENTRY)*deq_entries.size());
 
-			_f.seekp( 0, ofstream::end );
-			uint64_t pos_stdindex = _f.filepos();
-			assert(_f.good());
+				_f.seekp( 0, ofstream::end );
+				uint64_t pos_stdindex = _f.filepos();
+				assert(_f.good());
 
-			_f.write( (const char *)&std_index, sizeof(avilib::AVISTDINDEX) );
+				_f.write( (const char *)&std_index, sizeof(avilib::AVISTDINDEX) );
 			
-			uint8_t *p = new uint8_t[sizeof(avilib::AVISTDINDEX_ENTRY)*deq_entries.size()], *p0 = p;
-			for_each( deq_entries.begin(), deq_entries.end(), [&]( const avilib::AVISTDINDEX_ENTRY &entry ){
-				*(avilib::AVISTDINDEX_ENTRY *)p = entry;
-				p += sizeof(avilib::AVISTDINDEX_ENTRY);
-			});
-			_f.write( (const char *)p0, sizeof(avilib::AVISTDINDEX_ENTRY)*deq_entries.size() );
-			delete [] p0;
+				uint8_t *p = new uint8_t[sizeof(avilib::AVISTDINDEX_ENTRY)*deq_entries.size()], *p0 = p;
+				for( const avilib::AVISTDINDEX_ENTRY &entry : deq_entries ){
+					*(avilib::AVISTDINDEX_ENTRY *)p = entry;
+					p += sizeof(avilib::AVISTDINDEX_ENTRY);
+				};
+				_f.write( (const char *)p0, sizeof(avilib::AVISTDINDEX_ENTRY)*deq_entries.size() );
+				delete [] p0;
 
-			avilib::AVISUPERINDEX_ENTRY supidx_entry;
-			supidx_entry.qwOffset = pos_stdindex;
-			supidx_entry.dwSize = std_index.cb+8;
-			supidx_entry.dwDuration = static_cast<DWORD>(deq_entries.size()); // frame count (video)
-			deq_supIdxEntries.push_back(supidx_entry);
-		});
+				avilib::AVISUPERINDEX_ENTRY supidx_entry;
+				supidx_entry.qwOffset = pos_stdindex;
+				supidx_entry.dwSize = std_index.cb+8;
+				supidx_entry.dwDuration = static_cast<DWORD>(deq_entries.size()); // frame count (video)
+				deq_supIdxEntries.push_back(supidx_entry);
+			};
 
-		// write that list to superindex
-		_f.seekp( pos_odmlSuperIdx, ofstream::beg );
-		_f.write( (const char *)&m_superIdx, sizeof(AVISUPERINDEX) );
-		for_each( deq_supIdxEntries.begin(), deq_supIdxEntries.end(), [&]( avilib::AVISUPERINDEX_ENTRY &supidx_entry ){
-			_f.write( (const char *)&supidx_entry, sizeof(avilib::AVISUPERINDEX_ENTRY));
-		});
+			// write that list to superindex
+			_f.seekp( pos_odmlSuperIdx[stream_idx], ofstream::beg );
+			_f.write( (const char *)&m_superIdxs[stream_idx], sizeof(AVISUPERINDEX) );
+			for( avilib::AVISUPERINDEX_ENTRY &supidx_entry : deq_supIdxEntries ){
+				_f.write( (const char *)&supidx_entry, sizeof(avilib::AVISUPERINDEX_ENTRY));
+			};
+		}
 	}
 
 
 
-	// write stream header
-	_f.seekp( pos_streamHeader[0], ofstream::beg );
-	_f.write( (const char *)&m_avisHeader, sizeof(avilib::AVISTREAMHEADER) );
+	// write stream headers
+	for( int32_t k=0; k<i_streams; k++ ){
+		if( m_streamTypes[ k ] == avilib_Audio && m_videoStreamIdx != ~0u ){
+			uint32_t vrate = m_avisHeaders[ m_videoStreamIdx ].dwRate;
+			uint32_t vscal = m_avisHeaders[ m_videoStreamIdx ].dwScale;
+			if( vrate && m_avisHeaders[ k ].dwScale && m_waveFormat.Format.nChannels ) {
+				uint32_t seconds = m_avimHeader.dwTotalFrames * vscal / vrate; // fixme: no video, bad timescale
+				uint32_t len = m_avisHeaders[ k ].dwRate * seconds / m_avisHeaders[ k ].dwScale / m_waveFormat.Format.nChannels;
+				m_avisHeaders[ k ].dwLength = len;
+			}			
+		}
+		_f.seekp( pos_streamHeader[ k ], ofstream::beg );
+		_f.write( (const char *)&m_avisHeaders[ k ], sizeof( avilib::AVISTREAMHEADER ) );
+	}
 
 	if( m_RIFF_idx == 0 )
 	{
@@ -274,7 +313,7 @@ bool avilib::AviWriter::close()
 	}
 	else
 	{
-		// write movi size without final "ix00"s
+		// write movi size without final "ixNN"s
 		_f.seekp( 0, ofstream::end );
 		uint32_t riffAvixMoviSize = (uint32_t)((uint64_t)_f.filepos() - pos_moviListSize - 4);
 		_f.seekp( pos_moviListSize, ofstream::beg );
@@ -309,8 +348,6 @@ void avilib::AviWriter::finish_avix()
 
 void avilib::AviWriter::finish_old()
 {
-	// write old index
-	// write stream size
 	for( int32_t stream_idx = 0; stream_idx < 1; stream_idx++ )
 	{
 		_f.seekp( 0, ofstream::end );
@@ -325,10 +362,9 @@ void avilib::AviWriter::finish_old()
 	_f.write( "idx1", 4 );
 	_f.write((const char *)&sz,4);
 
-	for_each( m_oldIndexEntries.begin(), m_oldIndexEntries.end(), [&]( avilib::AVIOLDINDEX &entry ){
+	for( avilib::AVIOLDINDEX &entry : m_oldIndexEntries )
 		_f.write( (const char *)&entry, sizeof(avilib::AVIOLDINDEX) );
-	});
-
+	
 	// write file size right after "RIFF"
 	_f.seekp( 0, ofstream::end );
 	uint32_t s_ = (uint32_t)_f.tellp() - 8;
@@ -336,14 +372,24 @@ void avilib::AviWriter::finish_old()
 	_f.write( (const char *)&s_, 4 );
 }
 
+
 bool avilib::AviWriter::write_frame( uint8_t stream_idx, void *data )
+{
+	return write_data( stream_idx, data, m_bitmapInfo.biSizeImage );
+}
+
+
+bool avilib::AviWriter::write_data( uint8_t stream_idx, void *data, uint32_t len )
 {
 	if( _f.bad() ) return false;
 	char message[32];
 
 	if( m_reservedFrames <= m_totalFrames ) return false;
 
-	uint32_t ui_next_RIFF_size = m_RIFF_size + m_bitmapInfo.biSizeImage + 8;
+	FOURCC fourcc = m_streamTypes[stream_idx] == avilib_Video ?
+		generate_fcc( "dc", stream_idx ) : generate_fcc( "wb", stream_idx );
+
+	uint32_t ui_next_RIFF_size = m_RIFF_size + len + 8;
 	if( ui_next_RIFF_size >= m_currMaxRIFFSize )
 	{
 		if( m_RIFF_idx == 0 ){
@@ -368,11 +414,11 @@ bool avilib::AviWriter::write_frame( uint8_t stream_idx, void *data )
 
 		_f.write( "LIST", 4 );
 		pos_moviListSize = _f.filepos();
-		_f.write( (const char *)&NULL32, 4 ); // later ... FIXME
+		_f.write( (const char *)&NULL32, 4 ); // later ...
 		_f.write( "movi", 4 );
 	}
 
-	m_RIFF_size += m_bitmapInfo.biSizeImage + 8;
+	m_RIFF_size += len + 8;
 
 	if( m_RIFF_idx == 0 )
 	{
@@ -381,40 +427,40 @@ bool avilib::AviWriter::write_frame( uint8_t stream_idx, void *data )
 		framePosforOldIndex -= pos_1stMoviStart; // relative to first "movi"
 
 		avilib::AVIOLDINDEX entry;
-		entry.dwChunkId = generate_fcc( "dc", 0 );
-		entry.dwFlags = AVIIF_KEYFRAME;
+		entry.dwChunkId = fourcc;
+		entry.dwFlags = AVIIF_KEYFRAME; // for PCM Audio as well
+		entry.dwSize = len;
 		entry.dwOffset = (DWORD)framePosforOldIndex;
-		entry.dwSize = m_bitmapInfo.biSizeImage;
 		m_oldIndexEntries.push_back( entry );
-
 	}
 
-	if( (m_stdIndexEntries[(int32_t)m_stdIndexes.size()-1].size() + 1U) * sizeof(avilib::AVISTDINDEX_ENTRY) + sizeof(avilib::AVISTDINDEX) >= STDINDEXSIZE )
+	if( (m_stdIndexEntries[stream_idx][(int32_t)m_stdIndexes[stream_idx].size()-1].size() + 1U) * sizeof(avilib::AVISTDINDEX_ENTRY) + sizeof(avilib::AVISTDINDEX) >= STDINDEXSIZE )
 	{
 		avilib::AVISTDINDEX std_index;
-		std_index.fcc = '00xi';
+		std_index.fcc = stream_idx ? '10xi' : '00xi';
 		std_index.wLongsPerEntry = sizeof(avilib::AVISTDINDEX_ENTRY)/sizeof(DWORD);
 		std_index.bIndexSubType = 0; // must be 0
-		std_index.dwChunkId = generate_fcc( "dc", 0 );
+		std_index.dwChunkId = fourcc;
 		std_index.qwBaseOffset = (uint64_t)_f.filepos(); // all dwOffsets in aIndex array are relative to this
 		std_index.dwReserved = 0; // must be 0
-		m_stdIndexes.push_back( std_index );
+		m_stdIndexes[stream_idx].push_back( std_index );
 		
 		m_currBaseOff = std_index.qwBaseOffset;
 
-		m_superIdx.nEntriesInUse++;
+		m_superIdxs[stream_idx].nEntriesInUse++;
 	}
 
-	avilib::AVISTDINDEX_ENTRY std_entry = { static_cast<DWORD>((uint64_t)_f.tellp() + 8 - m_currBaseOff), m_bitmapInfo.biSizeImage };
-	m_stdIndexEntries[(int32_t)m_stdIndexes.size()-1].push_back( std_entry );
+	avilib::AVISTDINDEX_ENTRY std_entry = { static_cast<DWORD>((uint64_t)_f.tellp() + 8 - m_currBaseOff), len };
+	m_stdIndexEntries[stream_idx][(int32_t)m_stdIndexes[stream_idx].size()-1].push_back( std_entry );
 
-	_f.write( "00dc", 4 );
-	_f.write( (const char *)&m_bitmapInfo.biSizeImage, 4 );
-	_f.write( (const char *)data, m_bitmapInfo.biSizeImage );
+	_f.write( (const char *)&fourcc, 4 );
+	_f.write( (const char *)&len, 4 );
+	_f.write( (const char *)data, len );
 
-
-	m_avimHeader.dwTotalFrames++;
-	m_avisHeader.dwLength++;
+	if( m_streamTypes[stream_idx] == avilib_Video ) {
+		m_avimHeader.dwTotalFrames++;
+		m_avisHeaders[ stream_idx ].dwLength++;
+	}
 	m_totalFrames++;
 	
 	return true;
@@ -425,22 +471,33 @@ bool avilib::AviWriter::setVideoProperties( uint8_t stream_idx, int32_t width, i
 {
 	if( m_opened )
 		return false;
-
+	
 	uint32_t Tmicr = int32_t( .5 + 1000000. / rateHz );
 
 	m_avimHeader.dwMicroSecPerFrame = Tmicr;
 	m_avimHeader.dwMaxBytesPerSec = DWORD( .5 + framesize * rateHz );
 
+
+	memset( &m_avisHeaders[ stream_idx ], 0x0, sizeof( avilib::AVISTREAMHEADER ) );
+	AVISTREAMHEADER &aviVideoStreamHeader = m_avisHeaders[ stream_idx ];
+
+	aviVideoStreamHeader.fcc = 'hrts';
+	aviVideoStreamHeader.cb = sizeof( avilib::AVISTREAMHEADER ) - 8;
+	aviVideoStreamHeader.fccType = 'sdiv';
+	aviVideoStreamHeader.fccHandler = BI_RGB;
+	aviVideoStreamHeader.dwScale = 1;
+	aviVideoStreamHeader.dwQuality = -1;
+	
 	int32_t rate, scale;
 	if( avilib::cancel( int32_t( .5 + 1000. * rateHz ), 1000, rate, scale ) )
 	{
-		m_avisHeader.dwScale = scale;
-		m_avisHeader.dwRate = rate;
+		aviVideoStreamHeader.dwScale = scale;
+		aviVideoStreamHeader.dwRate = rate;
 	}
 	else
 	{
-		m_avisHeader.dwScale = 1;
-		m_avisHeader.dwRate = uint32_t( .5 + rateHz );
+		aviVideoStreamHeader.dwScale = 1;
+		aviVideoStreamHeader.dwRate = uint32_t( .5 + rateHz );
 	}
 
 	m_avimHeader.dwMaxBytesPerSec = framesize * uint32_t( .5 + rateHz );
@@ -448,21 +505,23 @@ bool avilib::AviWriter::setVideoProperties( uint8_t stream_idx, int32_t width, i
 	m_avimHeader.dwWidth = width;
 	m_avimHeader.dwHeight = height;
 
-	m_avisHeader.fccType = 'sdiv';
-	m_avisHeader.fccHandler._ = codec;
-	m_avisHeader.dwSuggestedBufferSize = framesize;
-	m_avisHeader.rcFrame.top = 
-	m_avisHeader.rcFrame.left = 0;
-	m_avisHeader.rcFrame.bottom = height;
-	m_avisHeader.rcFrame.right = width;
+	aviVideoStreamHeader.fccType = 'sdiv';
+	aviVideoStreamHeader.fccHandler._ = codec;
+	aviVideoStreamHeader.dwSuggestedBufferSize = framesize;
+	aviVideoStreamHeader.rcFrame.top =
+	aviVideoStreamHeader.rcFrame.left = 0;
+	aviVideoStreamHeader.rcFrame.bottom = height;
+	aviVideoStreamHeader.rcFrame.right = width;
 
 	m_bitmapInfo.biWidth = width;
 	m_bitmapInfo.biHeight = height;
 	m_bitmapInfo.biCompression = codec;
 	m_bitmapInfo.biSizeImage = framesize;
-
-
-	m_propsSet = true;
+	
+	m_avimHeader.dwStreams++;
+	
+	m_videoStreamIdx = stream_idx;
+	m_streamTypes[ stream_idx ] = avilib_Video;
 	return true;
 }
 
@@ -471,15 +530,37 @@ bool avilib::AviWriter::setAudioProperties(uint8_t stream_idx, int16_t format, i
 	if( m_opened )
 		return false;
 
-	m_waveFormat.wFormatTag = format;
-	m_waveFormat.nChannels = channels;
-	m_waveFormat.nSamplesPerSec = channels;
-	m_waveFormat.nAvgBytesPerSec = avgBytesPerSecond;
-	m_waveFormat.nBlockAlign = blockAlign;
-	m_waveFormat.wBitsPerSample = bitsPerSample;
-	m_waveFormat.cbSize = 0;
+	m_waveFormat.Format.wFormatTag = format;
+	m_waveFormat.Format.nChannels = channels;
+	m_waveFormat.Format.nSamplesPerSec = samplesPerSecond;
+	m_waveFormat.Format.nAvgBytesPerSec = avgBytesPerSecond;
+	m_waveFormat.Format.nBlockAlign = blockAlign;
+	m_waveFormat.Format.wBitsPerSample = bitsPerSample;
+	m_waveFormat.Format.cbSize = 0;
 
-	m_propsSet = true;
+	memset( &m_avisHeaders[ stream_idx ], 0x0, sizeof( avilib::AVISTREAMHEADER ) );
+	AVISTREAMHEADER &aviAudioStreamHeader = m_avisHeaders[ stream_idx ];
+	aviAudioStreamHeader.fcc = 'hrts';
+	aviAudioStreamHeader.cb = sizeof( avilib::AVISTREAMHEADER ) - 8;
+	aviAudioStreamHeader.fccType = 'sdua';
+
+	aviAudioStreamHeader.fccType = 'sdua';
+	aviAudioStreamHeader.fccHandler._ = 0x0000;
+	aviAudioStreamHeader.dwSuggestedBufferSize = avgBytesPerSecond * channels;
+	aviAudioStreamHeader.dwRate = samplesPerSecond * bitsPerSample;
+	aviAudioStreamHeader.dwSampleSize = bitsPerSample;
+	aviAudioStreamHeader.dwScale = bitsPerSample;
+
+	m_waveFormat.Samples.wValidBitsPerSample = bitsPerSample;
+	m_waveFormat.Samples.wReserved = 0;
+	m_waveFormat.Samples.wSamplesPerBlock = blockAlign;
+	m_waveFormat.dwChannelMask = 0x0;
+	for( int32_t i=0; i<channels; ++i )
+		m_waveFormat.dwChannelMask |= 1<<i;
+
+	m_avimHeader.dwStreams++;
+
+	m_streamTypes[ stream_idx ] = avilib_Audio;
 	return true;
 }
 

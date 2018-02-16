@@ -15,7 +15,7 @@
 
 
 #define AVILIB_VERSION_Maj 0
-#define AVILIB_VERSION_Min 1
+#define AVILIB_VERSION_Min 2
 #define AVILIB_VERSION_Rev 0
 #define STR_(x) #x
 #define STR(x) STR_(x)
@@ -93,11 +93,20 @@ AVI_DLL_DECL int32_t aviwriter_close( aviwriter_t *p_context ){
 AVI_DLL_DECL int32_t aviwriter_write_frame( aviwriter_t *p_context, uint8_t stream_idx, void *data ){
 	return ((avilib::AviWriter *)p_context)->write_frame( stream_idx, data ) ? 1 : 0;
 }
-AVI_DLL_DECL int32_t aviwriter_set_vprops( aviwriter_t *p_context, uint8_t stream_idx, int32_t width, int32_t height, uint32_t codec, uint32_t framesize, double rateHz ){
+AVI_DLL_DECL int32_t aviwriter_write_chunk( aviwriter_t *p_context, uint8_t stream_idx, void *data, uint32_t len ){
+	return ((avilib::AviWriter *)p_context)->write_data( stream_idx, data, len ) ? 1 : 0;
+}
+AVI_DLL_DECL int32_t aviwriter_set_video_props( aviwriter_t *p_context, uint8_t stream_idx, int32_t width, int32_t height, uint32_t codec, uint32_t framesize, double rateHz ){
 	return ((avilib::AviWriter *)p_context)->setVideoProperties( stream_idx, width, height, codec, framesize, rateHz ) ? 1 : 0;
+}
+AVI_DLL_DECL int32_t aviwriter_set_audio_props( aviwriter_t *p_context, uint8_t stream_idx, int16_t format, int8_t channels, uint32_t samplesPerSecond, uint32_t avgBytesPerSecond, uint16_t bitsPerSample, uint16_t blockAlign ){
+	return ((avilib::AviWriter *)p_context)->setAudioProperties( stream_idx, format, channels, samplesPerSecond, avgBytesPerSecond, bitsPerSample, blockAlign ) ? 1 : 0;
 }
 AVI_DLL_DECL int32_t aviwriter_set_frame_count( aviwriter_t *p_context, uint8_t stream_idx, uint32_t count ){
 	return ((avilib::AviWriter *)p_context)->setFrameCount( stream_idx, count ) ? 1 : 0;
+}
+AVI_DLL_DECL int32_t aviwriter_openDML( aviwriter_t *p_context, int32_t openDML ){
+	return ( ( avilib::AviWriter * )p_context )->openDML( !!openDML ) ? 1 : 0;
 }
 
 

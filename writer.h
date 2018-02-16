@@ -3,33 +3,34 @@ namespace avilib
 {
 	class AviWriter : protected LoggingObject
 	{
+		typedef int32_t stream_id;
+
 		std::ofstream _f;
 		uint64_t pos_RIFFSize;
 		uint64_t pos_moviListSize;
-		std::ofstream::streamoff pos_1stMoviStart;
 		std::ofstream::streamoff pos_odmlExt;
-		std::ofstream::streamoff pos_odmlSuperIdx;
+		std::ofstream::streamoff pos_1stMoviStart;
 		std::ofstream::streamoff pos_aviMainHeader;
-		std::map<int32_t, std::ofstream::streamoff> pos_streamHeader;
+		std::map<stream_id, std::ofstream::streamoff> pos_odmlSuperIdx;
+		std::map<stream_id, std::ofstream::streamoff> pos_streamHeader;
 
-		avilib::AVISUPERINDEX m_superIdx;
-		std::vector<avilib::AVISTDINDEX> m_stdIndexes;
-		std::map<int32_t, std::deque<avilib::AVISTDINDEX_ENTRY>> m_stdIndexEntries;
-
+		std::map<stream_id, avilib::AVISUPERINDEX> m_superIdxs;
+		std::map<stream_id, std::vector<avilib::AVISTDINDEX>> m_stdIndexes;
+		std::map<stream_id, std::map<int32_t, std::deque<avilib::AVISTDINDEX_ENTRY>>> m_stdIndexEntries;
+		std::map<stream_id, avilib_streamtype_t> m_streamTypes;
+		
 		std::deque<avilib::AVIOLDINDEX> m_oldIndexEntries;
 
-		// AVI header stuff
 		avilib::AVIMAINHEADER m_avimHeader;
-		avilib::AVISTREAMHEADER m_avisHeader;
+		std::map<int,avilib::AVISTREAMHEADER> m_avisHeaders;
 		avilib::BITMAPINFO m_bitmapInfo;
-		avilib::WAVEFORMATEX m_waveFormat;
+		avilib::WAVEFORMATEXTENSIBLE m_waveFormat;
 
 
 		bool m_openDML = true;
-		bool m_propsSet = false;
 		bool m_opened = false;
+		uint32_t m_videoStreamIdx = ~0u;
 		uint32_t m_reservedFrames = 0;
-
 		uint32_t m_RIFF_idx = 0;  // nth RIFF section (OpenDML)
 		uint32_t m_RIFF_size = 0; // current RIFF size (OpenDML)
 		uint32_t m_totalFrames = 0;
@@ -50,7 +51,9 @@ namespace avilib
 
 		bool open( const char *filename );
 		bool write_frame( uint8_t stream_idx, void *data );
+		bool write_data( uint8_t stream_idx, void *data, uint32_t len );
 		bool close();
+		bool openDML( bool yes );
 	};
 
 }

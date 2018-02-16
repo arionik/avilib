@@ -115,7 +115,7 @@ namespace avilib
 			WORD wReserved;
 		} Samples;
 		DWORD        dwChannelMask;
-		WORD/* ? */  SubFormat;
+		uint8_t  SubFormat[16];
 	} WAVEFORMATEXTENSIBLE;
 
 	typedef struct mpeg1waveformat_tag {

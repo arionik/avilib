@@ -67,8 +67,11 @@ AVI_DLL_DECL void aviwriter_destroy( aviwriter_t *p_context );
 AVI_DLL_DECL int32_t aviwriter_open( aviwriter_t *p_context, const char *filename );
 AVI_DLL_DECL int32_t aviwriter_close( aviwriter_t *p_context );
 AVI_DLL_DECL int32_t aviwriter_write_frame( aviwriter_t *p_context, uint8_t stream_idx, void *data );
-AVI_DLL_DECL int32_t aviwriter_set_vprops( aviwriter_t *p_context, uint8_t stream_idx, int32_t width, int32_t height, uint32_t codec, uint32_t framesize, double rateHz );
+AVI_DLL_DECL int32_t aviwriter_write_chunk( aviwriter_t *p_context, uint8_t stream_idx, void *data, uint32_t len );
+AVI_DLL_DECL int32_t aviwriter_set_video_props( aviwriter_t *p_context, uint8_t stream_idx, int32_t width, int32_t height, uint32_t codec, uint32_t framesize, double rateHz );
+AVI_DLL_DECL int32_t aviwriter_set_audio_props( aviwriter_t *p_context, uint8_t stream_idx, int16_t format, int8_t channels, uint32_t samplesPerSecond, uint32_t avgBytesPerSecond, uint16_t bitsPerSample, uint16_t blockAlign );
 AVI_DLL_DECL int32_t aviwriter_set_frame_count( aviwriter_t *p_context, uint8_t stream_idx, uint32_t count );
+AVI_DLL_DECL int32_t aviwriter_openDML( aviwriter_t *p_context, int32_t openDML );
 
 
 AVI_DLL_DECL void avilib_version( int32_t *p_maj, int32_t *p_min, int32_t *p_rev, const char **ppc_string );
