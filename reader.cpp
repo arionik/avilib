@@ -234,7 +234,8 @@ bool avilib::AviReader::open( const char *filename )
 				}
  */
 			}
-			sprintf( message, "%x AVIOLDINDEX", size/( uint32_t )sizeof(AVIOLDINDEX)); log( message );
+			sprintf( message, "%x AVIOLDINDEX", size/( uint32_t )sizeof(AVIOLDINDEX));
+			log( message );
 			delete [] p0;
 		}
 		else if( *(uint32_t *)tag == (uint32_t)'lmdo' ){
