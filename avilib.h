@@ -5,7 +5,7 @@
 		#ifndef AVI_IMPORT
 			#define AVI_DLL_DECL __declspec(dllexport)
 		#else
-			#define AVI_DLL_DECL  __declspec(dllimport)
+			#define AVI_DLL_DECL __declspec(dllimport)
 		#endif
 	#else
 		#define AVI_DLL_DECL
