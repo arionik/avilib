@@ -1,8 +1,6 @@
 
 #include <stdint.h>
-#ifdef __GNUC__
-	#define AVI_DLL_DECL
-#else
+#ifdef _WIN32
 	#ifndef _LIB
 		#ifndef AVI_IMPORT
 			#define AVI_DLL_DECL __declspec(dllexport)
@@ -12,6 +10,8 @@
 	#else
 		#define AVI_DLL_DECL
 	#endif
+#else
+	#define AVI_DLL_DECL
 #endif
 
 typedef struct
