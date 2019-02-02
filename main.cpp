@@ -165,10 +165,9 @@ int main( int argc, char *argv[] )
 
 		ifstream in( input, ifstream::binary );
 		if( !in.good() ) return -1;
-		ifstream audio_in;
+		ifstream audio_in( audiosrc, ifstream::binary );
 		if( !audiosrc.empty() ){
 			/* we hope it is PCM */
-			audio_in = ifstream( audiosrc, ifstream::binary );
 			if( !audio_in.good() ) return -2;
 			audio_in.seekg( (std::streamsize)44 );
 			audio_chunk_size = (uint32_t)((double)48000*2*8 / 25. + .5); // one chunk per video frame
