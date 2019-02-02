@@ -1,0 +1,8 @@
+cmake_minimum_required (VERSION 3.1.0)
+project (avilib)
+set(CMAKE_CXX_STANDARD 11)
+add_library (avilib avilib.cpp reader.cpp writer.cpp)
+install(TARGETS avilib DESTINATION lib)
+install(FILES avilib.h DESTINATION include)
+add_executable (avilib_test main.cpp)
+target_link_libraries(avilib_test avilib)
