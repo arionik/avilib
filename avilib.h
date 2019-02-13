@@ -11,7 +11,7 @@
 		#define AVI_DLL_DECL
 	#endif
 #else
-	#define AVI_DLL_DECL
+	#define AVI_DLL_DECL __attribute__ ((visibility ("default")))
 #endif
 
 typedef struct
