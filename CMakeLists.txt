@@ -1,9 +1,12 @@
-cmake_minimum_required (VERSION 2.8.0)
+cmake_minimum_required (VERSION 3.0.0)
 project (avilib)
-add_compile_options(-std=c++11)
-add_library (avi avilib.cpp reader.cpp writer.cpp)
+set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_C_STANDARD 17)
+
+add_library (avi STATIC avilib.cpp reader.cpp writer.cpp)
+target_compile_definitions(avi PRIVATE _CRT_SECURE_NO_WARNINGS)
 install(TARGETS avi DESTINATION lib)
 install(FILES avilib.h DESTINATION include)
-add_compile_options(-std=c++11)
+
 add_executable (avilib_test main.cpp)
 target_link_libraries(avilib_test avi)
