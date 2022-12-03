@@ -171,7 +171,7 @@ avilib::FOURCC avilib::generate_fcc( std::string id, uint8_t idx )
 {
 	char buff[3] = {0};
 	avilib::FOURCC ret = {0};
-	sprintf( buff, "%02i", idx > 99 ? 99 : idx < 0 ? 0 : idx);
+	snprintf( buff, 3, "%02i", idx > 99 ? 99 : idx < 0 ? 0 : idx);
 	ret.fcc[0] = buff[0];
 	ret.fcc[1] = buff[1];
 	ret.fcc[2] = id.c_str()[0];

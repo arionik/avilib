@@ -10,7 +10,7 @@
 namespace avilib
 {
 	typedef uint32_t DWORD;
-	typedef union{
+	typedef union fourcc_S {
 		void operator = (uint32_t i){ _=i;};
 		DWORD _;
 		char fcc[4];
@@ -203,7 +203,7 @@ namespace avilib
 	} AVISUPERINDEX_ENTRY;
 
 
-	typedef struct {
+	typedef struct VIDEO_PROP_HEADER_S {
 		typedef enum {FORMAT_UNKNOWN, FORMAT_PAL_SQUARE, FORMAT_PAL_CCIR_601,
 			FORMAT_NTSC_SQUARE, FORMAT_NTSC_CCIR_601} video_format_t;
 		DWORD VideoFormatToken;

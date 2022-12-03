@@ -65,7 +65,7 @@ bool avilib::AviReader::open( const char *filename )
 		int64_t pos = _f.tellg();
 		if( !_f.read( tag, 4 ) ) break;
 
-		sprintf( message, "%s @ " LLU, tag, (uint64_t)pos );
+		snprintf( message, 512, "%s @ " LLU, tag, (uint64_t)pos );
 		log( message );
 
 		if( *(uint32_t *)tag == (uint32_t)'KNUJ' ){
@@ -94,7 +94,7 @@ bool avilib::AviReader::open( const char *filename )
 			m_avimHeader.fcc = *(FOURCC*)tag;
 			m_avimHeader.cb = size;
 			_f.read( (char *)&m_avimHeader + 8, m_avimHeader.cb );
-			sprintf( message, "AVIMAINHEADER (\n  dwFlags=0x%x,\n  dwWidth=%i,\n  dwHeight=%i,\n  dwStreams=%i,\n  dwInitialFrames=%i,\n  dwMaxBytesPerSec=%i\n  dwMicroSecPerFrame=%i\n  dwPaddingGranularity=%i\n  dwSuggestedBufferSize=%i\n  dwTotalFrames=%i\n)",
+			snprintf( message, 512, "AVIMAINHEADER (\n  dwFlags=0x%x,\n  dwWidth=%i,\n  dwHeight=%i,\n  dwStreams=%i,\n  dwInitialFrames=%i,\n  dwMaxBytesPerSec=%i\n  dwMicroSecPerFrame=%i\n  dwPaddingGranularity=%i\n  dwSuggestedBufferSize=%i\n  dwTotalFrames=%i\n)",
 					m_avimHeader.dwFlags, m_avimHeader.dwWidth, m_avimHeader.dwHeight, m_avimHeader.dwStreams, m_avimHeader.dwInitialFrames, m_avimHeader.dwMaxBytesPerSec, m_avimHeader.dwMicroSecPerFrame, m_avimHeader.dwPaddingGranularity, m_avimHeader.dwSuggestedBufferSize, m_avimHeader.dwTotalFrames );
 			log( message );
 		}
@@ -105,7 +105,7 @@ bool avilib::AviReader::open( const char *filename )
 			if( !b_audio )
 				m_videoStreamIdx = i_streamHeader;
 
-			sprintf( message, "AVISTREAMHEADER (\n  fccType=%c%c%c%c,\n  fccHandler=%c%c%c%c,\n  dwFlags=%i,\n  wPriority=%i,\n  wLanguage=%i,\n  dwInitialFrames=%i\n  dwScale=%i\n  dwRate=%i\n  dwStart=%i\n  dwLength=%i\n  dwSuggestedBufferSize=%i\n  dwQuality=%i\n  dwSampleSize=%i\n  rcFrame.left=%i\n  rcFrame.top=%i\n  rcFrame.right=%i\n  rcFrame.bottom=%i\n)",
+			snprintf( message, 512, "AVISTREAMHEADER (\n  fccType=%c%c%c%c,\n  fccHandler=%c%c%c%c,\n  dwFlags=%i,\n  wPriority=%i,\n  wLanguage=%i,\n  dwInitialFrames=%i\n  dwScale=%i\n  dwRate=%i\n  dwStart=%i\n  dwLength=%i\n  dwSuggestedBufferSize=%i\n  dwQuality=%i\n  dwSampleSize=%i\n  rcFrame.left=%i\n  rcFrame.top=%i\n  rcFrame.right=%i\n  rcFrame.bottom=%i\n)",
 					m_avisHeader[i_streamHeader].fccType.fcc[0] ? m_avisHeader[i_streamHeader].fccType.fcc[0] : '?',
 					m_avisHeader[i_streamHeader].fccType.fcc[1] ? m_avisHeader[i_streamHeader].fccType.fcc[1] : '?',
 					m_avisHeader[i_streamHeader].fccType.fcc[2] ? m_avisHeader[i_streamHeader].fccType.fcc[2] : '?',
@@ -144,7 +144,7 @@ bool avilib::AviReader::open( const char *filename )
 					_f.seekg(-(std::streamoff)sizeof(avilib::WAVEFORMATEX),ifstream::cur);
 					_f.read( (char *)&m_waveformatExt, (uint32_t)sizeof(avilib::WAVEFORMATEXTENSIBLE) );
 					_f.seekg(size-sizeof(avilib::WAVEFORMATEXTENSIBLE),ifstream::cur);
-					sprintf( message, "WAVEFORMATEXTENSIBLE (\n  wFormatTag=0x%04x,\n  nChannels=%i,\n  nAvgBytesPerSec=%i,\n  nSamplesPerSec=%i,\n  wBitsPerSample=%i,\n  nBlockAlign=%i,\n  SubFormat=...,\n  wSamplesPerBlock=%i,\n  dwChannelMask=%i\n)",
+					snprintf( message, 512, "WAVEFORMATEXTENSIBLE (\n  wFormatTag=0x%04x,\n  nChannels=%i,\n  nAvgBytesPerSec=%i,\n  nSamplesPerSec=%i,\n  wBitsPerSample=%i,\n  nBlockAlign=%i,\n  SubFormat=...,\n  wSamplesPerBlock=%i,\n  dwChannelMask=%i\n)",
 							m_waveformat.wFormatTag, m_waveformat.nChannels, m_waveformat.nAvgBytesPerSec,
 							m_waveformat.nSamplesPerSec, m_waveformat.wBitsPerSample, m_waveformat.nBlockAlign,
 							m_waveformatExt.Samples.wSamplesPerBlock, m_waveformatExt.dwChannelMask);
@@ -152,7 +152,7 @@ bool avilib::AviReader::open( const char *filename )
 					_f.seekg(-(std::streamoff)sizeof(avilib::WAVEFORMATEX),ifstream::cur);
 					_f.read( (char *)&m_waveformatMpeg12, (uint32_t)sizeof(avilib::MPEG1WAVEFORMAT) );
 					_f.seekg((std::streamoff)size-sizeof(avilib::MPEG1WAVEFORMAT),ifstream::cur);
-					sprintf( message, "MPEG1WAVEFORMAT (\n  wFormatTag=0x%04x,\n  nChannels=%i,\n  nAvgBytesPerSec=%i,\n  nSamplesPerSec=%i,\n  wBitsPerSample=%i,\n  nBlockAlign=%i,\n  dwHeadBitrate=%i,\n  dwPTSHigh=%i,\n  dwPTSLow=%i,\n  fwHeadFlags=%i,\n  fwHeadLayer=%i,\n  fwHeadMode=%i,\n  fwHeadModeExt=%i,\n  wHeadEmphasis%i\n)",
+					snprintf( message, 512, "MPEG1WAVEFORMAT (\n  wFormatTag=0x%04x,\n  nChannels=%i,\n  nAvgBytesPerSec=%i,\n  nSamplesPerSec=%i,\n  wBitsPerSample=%i,\n  nBlockAlign=%i,\n  dwHeadBitrate=%i,\n  dwPTSHigh=%i,\n  dwPTSLow=%i,\n  fwHeadFlags=%i,\n  fwHeadLayer=%i,\n  fwHeadMode=%i,\n  fwHeadModeExt=%i,\n  wHeadEmphasis%i\n)",
 							m_waveformat.wFormatTag, m_waveformat.nChannels, m_waveformat.nAvgBytesPerSec,
 							m_waveformat.nSamplesPerSec, m_waveformat.wBitsPerSample, m_waveformat.nBlockAlign,
 							m_waveformatMpeg12.dwHeadBitrate, m_waveformatMpeg12.dwPTSHigh, m_waveformatMpeg12.dwPTSLow,
@@ -162,14 +162,14 @@ bool avilib::AviReader::open( const char *filename )
 					_f.seekg(-(std::streamoff)sizeof(avilib::WAVEFORMATEX),ifstream::cur);
 					_f.read( (char *)&m_waveformatMP3, (uint32_t)sizeof(avilib::MPEGLAYER3WAVEFORMAT) );
 					_f.seekg(size-sizeof(avilib::MPEGLAYER3WAVEFORMAT),ifstream::cur);
-					sprintf( message, "MPEGLAYER3WAVEFORMAT (\n  wFormatTag=0x%04x,\n  nChannels=%i,\n  nAvgBytesPerSec=%i,\n  nSamplesPerSec=%i,\n  wBitsPerSample=%i,\n  nBlockAlign=%i\n  fdwFlags%i,\n  nBlockSize%i,\n  nCodecDelay%i,\n  nFramesPerBlock%i,\n  wID=%i\n)",
+					snprintf( message, 512, "MPEGLAYER3WAVEFORMAT (\n  wFormatTag=0x%04x,\n  nChannels=%i,\n  nAvgBytesPerSec=%i,\n  nSamplesPerSec=%i,\n  wBitsPerSample=%i,\n  nBlockAlign=%i\n  fdwFlags%i,\n  nBlockSize%i,\n  nCodecDelay%i,\n  nFramesPerBlock%i,\n  wID=%i\n)",
 							m_waveformat.wFormatTag, m_waveformat.nChannels, m_waveformat.nAvgBytesPerSec,
 							m_waveformat.nSamplesPerSec, m_waveformat.wBitsPerSample, m_waveformat.nBlockAlign,
 							m_waveformatMP3.fdwFlags, m_waveformatMP3.nBlockSize, m_waveformatMP3.nCodecDelay, m_waveformatMP3.nFramesPerBlock,
 							m_waveformatMP3.wID);
 				} else {
 					_f.seekg(size-sizeof(avilib::WAVEFORMATEX),ifstream::cur);
-					sprintf( message, "WAVEFORMATEX (\n  wFormatTag=0x%04x,\n  nChannels=%i,\n  nAvgBytesPerSec=%i,\n  nSamplesPerSec=%i,\n  wBitsPerSample=%i,\n  nBlockAlign=%i\n)",
+					snprintf( message, 512, "WAVEFORMATEX (\n  wFormatTag=0x%04x,\n  nChannels=%i,\n  nAvgBytesPerSec=%i,\n  nSamplesPerSec=%i,\n  wBitsPerSample=%i,\n  nBlockAlign=%i\n)",
 							m_waveformat.wFormatTag, m_waveformat.nChannels, m_waveformat.nAvgBytesPerSec,
 							m_waveformat.nSamplesPerSec, m_waveformat.wBitsPerSample, m_waveformat.nBlockAlign );
 				}
@@ -178,7 +178,7 @@ bool avilib::AviReader::open( const char *filename )
 				_f.read( (char *)&m_bitmapInfo, std::min( size, (uint32_t)sizeof(avilib::BITMAPINFO) ) );
 				if( size>sizeof(avilib::BITMAPINFO) )
 					_f.seekg(size-sizeof(avilib::BITMAPINFO),ifstream::cur);
-				sprintf( message, "BITMAPINFO (\n  biWidth=%i,\n  biHeight=%i,\n  biPlanes=%i,\n  biBitCount=%i,\n  biCompression=%s,\n  biSizeImage=%i,\n  biXPelsPerMeter=%i,\n  biYPelsPerMeter=%i,\n  biClrUsed=%i,\n  biClrImportant=%i,\n)",
+				snprintf( message, 512, "BITMAPINFO (\n  biWidth=%i,\n  biHeight=%i,\n  biPlanes=%i,\n  biBitCount=%i,\n  biCompression=%s,\n  biSizeImage=%i,\n  biXPelsPerMeter=%i,\n  biYPelsPerMeter=%i,\n  biClrUsed=%i,\n  biClrImportant=%i,\n)",
 						m_bitmapInfo.biWidth, m_bitmapInfo.biHeight, m_bitmapInfo.biPlanes,
 						m_bitmapInfo.biBitCount, m_bitmapInfo.biCompression.fcc, m_bitmapInfo.biSizeImage,
 						m_bitmapInfo.biXPelsPerMeter, m_bitmapInfo.biYPelsPerMeter,
@@ -234,7 +234,7 @@ bool avilib::AviReader::open( const char *filename )
 				}
  */
 			}
-			sprintf( message, "%x AVIOLDINDEX", size/( uint32_t )sizeof(AVIOLDINDEX));
+			snprintf( message, 512, "%x AVIOLDINDEX", size/( uint32_t )sizeof(AVIOLDINDEX));
 			log( message );
 			delete [] p0;
 		}
@@ -245,7 +245,7 @@ bool avilib::AviReader::open( const char *filename )
 			_f.read( (char *)&size, 4 );
 			_f.read((char *)&m_odmlExt, sizeof(avilib::ODMLExtendedAVIHeader));
 			_f.seekg(size - sizeof(avilib::ODMLExtendedAVIHeader),ifstream::cur);
-			sprintf( message, "ODMLExtendedAVIHeader ( dwTotalFrames=%i )", m_odmlExt.dwTotalFrames); log( message );
+			snprintf( message, 512, "ODMLExtendedAVIHeader ( dwTotalFrames=%i )", m_odmlExt.dwTotalFrames); log( message );
 		}
 		else if( *(uint32_t *)tag == (uint32_t)'lhmd' ){
 			_f.read( (char *)&size, 4 );
@@ -275,7 +275,7 @@ bool avilib::AviReader::open( const char *filename )
 				entries.push_back(entry);
 			}
 
-			sprintf( message, "%ux AVISUPERINDEX_ENTRY (%s)", super_index.nEntriesInUse, fcc.c_str()); log( message );
+			snprintf( message, 512, "%ux AVISUPERINDEX_ENTRY (%s)", super_index.nEntriesInUse, fcc.c_str()); log( message );
 
 			for( avilib::AVISUPERINDEX_ENTRY &entry : entries ){
 				_f.seekg( entry.qwOffset, ifstream::beg );

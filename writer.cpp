@@ -402,7 +402,7 @@ bool avilib::AviWriter::write_data( uint8_t stream_idx, void *data, uint32_t len
 
 		_f.seekp(0,ofstream::end);
 
-		sprintf( message, "#%u: RIFFSize = %u", m_totalFrames, m_RIFF_size);
+		snprintf( message, 32, "#%u: RIFFSize = %u", m_totalFrames, m_RIFF_size);
 		log( message );
 
 		m_RIFF_idx++;
