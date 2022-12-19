@@ -1,6 +1,6 @@
 
 
-#ifndef WIN32
+#ifndef _WIN32
 #define GCC_PACK __attribute__((packed))
 #else 
 #define GCC_PACK
