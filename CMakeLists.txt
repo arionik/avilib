@@ -3,7 +3,9 @@ project (avilib)
 
 add_library (avi STATIC avilib.cpp reader.cpp writer.cpp)
 target_compile_definitions(avi PRIVATE _CRT_SECURE_NO_WARNINGS)
-add_compile_options(-Wno-multichar)
+if (NOT WIN32)
+	add_compile_options(-Wno-multichar)
+endif()
 if(CMAKE_GENERATOR MATCHES "Xcode")
     set_target_properties(avi PROPERTIES
         "XCODE_ATTRIBUTE_ONLY_ACTIVE_ARCH[variant=Debug]"   "YES"

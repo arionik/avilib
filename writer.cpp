@@ -24,7 +24,7 @@ using std::memset;
 
 #define STDINDEXSIZE 0x4000
 #ifdef _WIN32
-	#define filepos() tellp().seekpos()
+	#define filepos() tellp()
 #else
 	#define filepos() tellp()
 #endif
