@@ -42,6 +42,10 @@ avilib::AviReader::~AviReader()
 // https://msdn.microsoft.com/de-de/library/ms779636.aspx
 // http://www.onicos.com/staff/iz/formats/wav.html
 
+#if defined(__GNUG__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmultichar"
+#endif
 bool avilib::AviReader::open( const char *filename )
 {
 	char tag[ 5 ] = {0};
@@ -358,6 +362,10 @@ bool avilib::AviReader::open( const char *filename )
 	
 	return true;
 }
+#if defined(__GNUG__)
+#pragma GCC diagnostic pop
+#endif
+
 
 
 int32_t avilib::AviReader::read_frame( uint32_t idx, uint32_t stream, void *p_data )
