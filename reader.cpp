@@ -147,7 +147,8 @@ bool avilib::AviReader::open( const char *filename )
 				if( m_waveformat.wFormatTag == WAVE_FORMAT_EXTENSIBLE ){
 					_f.seekg(-(std::streamoff)sizeof(avilib::WAVEFORMATEX),ifstream::cur);
 					_f.read( (char *)&m_waveformatExt, (uint32_t)sizeof(avilib::WAVEFORMATEXTENSIBLE) );
-					_f.seekg(size-sizeof(avilib::WAVEFORMATEXTENSIBLE),ifstream::cur);
+					if( size>sizeof(avilib::WAVEFORMATEXTENSIBLE) )
+						_f.seekg(size-sizeof(avilib::WAVEFORMATEXTENSIBLE),ifstream::cur);
 					snprintf( message, 512, "WAVEFORMATEXTENSIBLE (\n  wFormatTag=0x%04x,\n  nChannels=%i,\n  nAvgBytesPerSec=%i,\n  nSamplesPerSec=%i,\n  wBitsPerSample=%i,\n  nBlockAlign=%i,\n  SubFormat=...,\n  wSamplesPerBlock=%i,\n  dwChannelMask=%i\n)",
 							m_waveformat.wFormatTag, m_waveformat.nChannels, m_waveformat.nAvgBytesPerSec,
 							m_waveformat.nSamplesPerSec, m_waveformat.wBitsPerSample, m_waveformat.nBlockAlign,
@@ -155,7 +156,8 @@ bool avilib::AviReader::open( const char *filename )
 				} else if( m_waveformat.wFormatTag == WAVE_FORMAT_MPEG ){
 					_f.seekg(-(std::streamoff)sizeof(avilib::WAVEFORMATEX),ifstream::cur);
 					_f.read( (char *)&m_waveformatMpeg12, (uint32_t)sizeof(avilib::MPEG1WAVEFORMAT) );
-					_f.seekg((std::streamoff)size-sizeof(avilib::MPEG1WAVEFORMAT),ifstream::cur);
+					if( size>sizeof(avilib::MPEG1WAVEFORMAT) )
+						_f.seekg((std::streamoff)size-sizeof(avilib::MPEG1WAVEFORMAT),ifstream::cur);
 					snprintf( message, 512, "MPEG1WAVEFORMAT (\n  wFormatTag=0x%04x,\n  nChannels=%i,\n  nAvgBytesPerSec=%i,\n  nSamplesPerSec=%i,\n  wBitsPerSample=%i,\n  nBlockAlign=%i,\n  dwHeadBitrate=%i,\n  dwPTSHigh=%i,\n  dwPTSLow=%i,\n  fwHeadFlags=%i,\n  fwHeadLayer=%i,\n  fwHeadMode=%i,\n  fwHeadModeExt=%i,\n  wHeadEmphasis%i\n)",
 							m_waveformat.wFormatTag, m_waveformat.nChannels, m_waveformat.nAvgBytesPerSec,
 							m_waveformat.nSamplesPerSec, m_waveformat.wBitsPerSample, m_waveformat.nBlockAlign,
@@ -165,14 +167,16 @@ bool avilib::AviReader::open( const char *filename )
 				} else if( m_waveformat.wFormatTag == WAVE_FORMAT_MPEGLAYER3 ){
 					_f.seekg(-(std::streamoff)sizeof(avilib::WAVEFORMATEX),ifstream::cur);
 					_f.read( (char *)&m_waveformatMP3, (uint32_t)sizeof(avilib::MPEGLAYER3WAVEFORMAT) );
-					_f.seekg(size-sizeof(avilib::MPEGLAYER3WAVEFORMAT),ifstream::cur);
+					if( size>sizeof(avilib::MPEGLAYER3WAVEFORMAT) )
+						_f.seekg(size-sizeof(avilib::MPEGLAYER3WAVEFORMAT),ifstream::cur);
 					snprintf( message, 512, "MPEGLAYER3WAVEFORMAT (\n  wFormatTag=0x%04x,\n  nChannels=%i,\n  nAvgBytesPerSec=%i,\n  nSamplesPerSec=%i,\n  wBitsPerSample=%i,\n  nBlockAlign=%i\n  fdwFlags%i,\n  nBlockSize%i,\n  nCodecDelay%i,\n  nFramesPerBlock%i,\n  wID=%i\n)",
 							m_waveformat.wFormatTag, m_waveformat.nChannels, m_waveformat.nAvgBytesPerSec,
 							m_waveformat.nSamplesPerSec, m_waveformat.wBitsPerSample, m_waveformat.nBlockAlign,
 							m_waveformatMP3.fdwFlags, m_waveformatMP3.nBlockSize, m_waveformatMP3.nCodecDelay, m_waveformatMP3.nFramesPerBlock,
 							m_waveformatMP3.wID);
 				} else {
-					_f.seekg(size-sizeof(avilib::WAVEFORMATEX),ifstream::cur);
+					if( size>sizeof(avilib::WAVEFORMATEX) )
+						_f.seekg(size-sizeof(avilib::WAVEFORMATEX),ifstream::cur);
 					snprintf( message, 512, "WAVEFORMATEX (\n  wFormatTag=0x%04x,\n  nChannels=%i,\n  nAvgBytesPerSec=%i,\n  nSamplesPerSec=%i,\n  wBitsPerSample=%i,\n  nBlockAlign=%i\n)",
 							m_waveformat.wFormatTag, m_waveformat.nChannels, m_waveformat.nAvgBytesPerSec,
 							m_waveformat.nSamplesPerSec, m_waveformat.wBitsPerSample, m_waveformat.nBlockAlign );
